@@ -348,6 +348,7 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 | D019 | 2026-10-05 | Renováveis centralizadas do `renovaveis.csv` de cada mês (períodos das semanas do mês, cenário 1); o `oper_parque_eolico.csv` não é necessário | Fecha o balanço de out/2026 com erro de 0,08% | Decidido |
 | D020 | 2026-10-05 | Carga para o forecast: a fonte de projeção tem carga bruta e líquida (sem MMGD) por submercado; usar a **líquida**, com a mesma definição no histórico (demanda bruta do `sumario.rv0` − MMGD das linhas `*gd`) | Evita prever a MMGD separadamente; as duas são equivalentes se a definição for a mesma | Proposta (conferir a equivalência quando a projeção chegar) |
 | D021 | 2026-10-05 | Hipótese de trabalho para a etapa 1: GH_band ≈ f(carga residual − térmica sem nuclear). Carga, renováveis, PCH, PCT e nuclear vêm das projeções de entrada; a térmica sem nuclear é a parcela a modelar com a hidrologia (ENA do ECMWF, EAR) | Carga residual explica o GH_band com r = 0,99 em 2026; a ENA só deve agir via despacho térmico | Proposta (validar com histórico que tenha anos secos, ex.: 2021) |
+| D023 | 2026-10-05 | Na etapa 1, modelar a **térmica total sem nuclear** (não só o mérito) como a parcela que responde à hidrologia | Mérito e inflexível se compensam (GNL antecipado entra como inflexível); o resíduo de GH acompanha o total (r = −0,94) | Proposta |
 | D022 | 2026-10-05 | Arquivos do DECOMP por mês: `relato.rv0` (balanço, térmica inflexível × mérito, bombeamento) + `renovaveis.csv` (eólica e solar separadas). O `sumario.rv0` fica redundante; manter os já baixados e migrar a leitura para o `relato` quando houver todos os meses | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica | Proposta (decisão do usuário sobre manter o `sumario`) |
 
 ## 5. Questões em aberto
@@ -378,7 +379,7 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 | Patamares de carga (horário `AAC001` e semanal `AAC002`), em `data/raw/patamar/<ano>/` | CCEE | 2025 e 2026 recebidos e conferidos |
 | Deck do DECOMP da CCEE para o PLD (`cmdeco.rv0`) — etapa 2 | CCEE | A trazer na etapa 2 |
 | Renováveis centralizadas (`renovaveis.csv`), na pasta mensal do DECOMP | ONS | Jan–out/2026 |
-| Relatório completo do DECOMP (`relato.rv0`), na pasta mensal | ONS | Out/2026 recebido e conferido; demais meses a trazer |
+| Relatório completo do DECOMP (`relato.rv0`), na pasta mensal | ONS | Jan–out/2026; balanço fecha em ±0,1 MWmed em todos os meses |
 | Saídas do DECOMP rv0 por mês (`sumario.rv0` e `ena.pdf`), em `data/raw/ons_decomp/<ano>/<ano>_<mes>/` | ONS | Jan–out/2026 recebidos; `sumario.rv0` conferido contra os boletins; `ena.pdf` ainda não lido |
 | GSF histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Geração hidráulica do MRE e garantia física | CCEE | Pendente |
@@ -426,7 +427,13 @@ Base: `data/processed/base_mensal_2026.parquet` (`features.base_mensal`). Gráfi
    - GH_band ≈ 0,986 × carga residual − 4.216 (desvio do resíduo 926 MWmed). O resíduo não acompanha a ENA (r = 0,17 em
      MWmed, −0,25 em % MLT) nem a EAR (−0,09); ele espelha a térmica sem nuclear (maio: térmica 3,4 mil, resíduo +1,9 mil;
      setembro: térmica 6,5 mil, resíduo −1,4 mil).
-   - Térmica por mérito em out/2026: 484 de 5.762 MWmed (92% inflexível). O canal hidrologia → térmica → hidráulica quase
-     não operou em 2026 (EAR do SIN entre 47% e 72%).
+   - Térmica (`relato.rv0`, jan–out): a parcela por **mérito** caiu de 3,0–3,8 mil MWmed (jan–jun) para 0,5–1,8 mil
+     (jul–out), acompanhando a ENA acima da média (r = −0,87 com a ENA em % MLT): saíram carvão do NE (Pecém, Itaqui) e
+     gás (Maranhão IV/V, Baixada Fluminense). A **inflexível sem nuclear** subiu de 2,3 para 5,2 mil: GNL com despacho
+     definido antecipadamente (UTE GNA II +1,6 mil, Barcarena) e carvão do Sul (Candiota, Jorge Lacerda, Pampa Sul).
+     Uma compensou a outra; para a hidráulica o que importa é a **térmica total sem nuclear** (r = −0,94 com o resíduo
+     de GH; mérito sozinho: −0,15).
+   - Atenção: "inflexível" no DECOMP mistura inflexibilidade declarada e GNL despachado por mérito com antecedência
+     (que entra no mês como GTmin). A separação inflexível × mérito não é uma separação "estrutural × hidrologia".
 5. **ENA em MWmed e GH não fecham balanço:** a ENA usa produtividade de referência e conta cada afluência em toda a cascata, sem descontar vertimento e usos consuntivos; não comparar as duas como "água que entra × água que sai".
 6. **Limite:** 10 meses de um ano sem estresse hídrico. Correlações aqui descrevem 2026, não servem para estimar o modelo.
