@@ -57,7 +57,7 @@ Períodos:
 
 ### 3.1 Como a bandeira é calculada (fonte: InfoBandeira CCEE nº 102, out/2026)
 
-Conferido reproduzindo os números dos boletins de jan a out/2026 (maio ausente): a regra acerta **9 de 9** cores.
+Conferido reproduzindo os números dos boletins de jan a out/2026: a regra acerta **10 de 10** cores.
 
 **Momento da decisão:** a ANEEL divulga a cor por volta do dia 25 do mês anterior, com base nas
 **projeções do PMO (DECOMP revisão 0)** para o mês, e não em valores realizados.
@@ -132,6 +132,7 @@ boletins (jun, jul, out) traz R$ 758,27. Provável erro de digitação; não afe
 | fev | 53.196 | 52.965 | 1,00 | 354,65 | 0,0 | Verde | Verde |
 | mar | 54.397 | 52.859 | 1,03 | 427,08 | 0,0 | Verde | Verde |
 | abr | 51.385 | 52.806 | 0,97 | 258,01 | 7,7 | Verde | Verde |
+| mai | 42.280 | 52.851 | 0,80 | 237,58 | 47,5 | Amarela | Amarela |
 | jun | 37.478 | 52.888 | 0,71 | 222,92 | 64,6 | Amarela | Amarela |
 | jul | 37.226 | 52.899 | 0,70 | 171,48 | 51,4 | Amarela | Amarela |
 | ago | 37.885 | 52.911 | 0,72 | 128,67 | 36,0 | Amarela | Amarela |
@@ -142,7 +143,7 @@ Observações:
 
 - **GF_band é praticamente constante** (52,8 a 53,0 mil MWmed). Toda a variação do GSF vem do GH_band (37 a 54 mil).
 - **Período úmido (jan–abr):** GSF ≥ 0,95 e bandeira verde mesmo com PLD alto (R$ 355 em fev, R$ 427 em mar). O GSF decide sozinho.
-- **Período seco (jun–set):** GSF entre 0,70 e 0,76; aí é o PLD que separa verde, amarela e vermelha. Junho ficou perto da vermelha 1 (X = 64,6 contra limite de 69).
+- **Período seco (mai–set):** GSF entre 0,70 e 0,80; aí é o PLD que separa verde, amarela e vermelha. Junho ficou perto da vermelha 1 (X = 64,6 contra limite de 69).
 
 
 ### 3.3 Reprodução do GH_band a partir do `sumario.rv0` (DECOMP rv0)
@@ -163,7 +164,10 @@ CCEE em `data/raw/patamar/<ano>/` (ver D018). Aproximação sem fonte externa: i
 por patamar a partir do bloco `DEMANDA BRUTA` (as médias por subsistema dão um sistema de equações) e ratear pelos
 dias da semana que caem no mês. Erro em out/2026: +8 MWmed (0,02%), desprezível (D009).
 
-**Implementação:** `load.ler_sumario`, `load.horas_por_semana` e `regra.calcular_gh_band` (out/2026: GH_band 43.177,5 contra 43.178; GSF 0,82).
+**Implementação:** `load.ler_sumario`, `load.horas_por_semana`, `regra.calcular_gh_band` e `regra.serie_gh_band`.
+**Validação jan–out/2026:** nos 10 meses, GH ONS, ANDE, PCH e GH_band ficam a menos de 1 MWmed do publicado e o GSF
+arredondado é idêntico em todos. O boletim de maio/2026 (nº 97) cita "fevereiro de 2026" em alguns trechos por erro de digitação; o conteúdo é de maio.
+Série salva em `data/processed/gh_band_2026.parquet`.
 Os fatores da CCEE (Tabela 3) mudam no ano: jan–fev/2026 usaram a média de 2024 e, de março em diante, a média de 2025.
 Ficam em `regra.FATORES`; para outros anos, cadastrar a partir dos boletins.
 
@@ -234,7 +238,7 @@ solar centralizada e intercâmbio internacional. Ver Q16.
 | Regra/ábaco vigente e REH 3.306/2024 (PDF), em `docs/referencias/` | ANEEL | Recebido; constantes do ábaco e tabela de GFOM conferidas |
 | Patamares de carga (horário `AAC001` e semanal `AAC002`), em `data/raw/patamar/<ano>/` | CCEE | 2025 e 2026 recebidos e conferidos |
 | Deck do DECOMP da CCEE para o PLD (`cmdeco.rv0`) — etapa 2 | CCEE | A trazer na etapa 2 |
-| Saídas do DECOMP rv0 por mês (`sumario.rv0` e `ena.pdf`), em `data/raw/ons_decomp/<ano>/<ano>_<mes>/` | ONS | Out/2026 recebido e conferido; demais meses a trazer |
+| Saídas do DECOMP rv0 por mês (`sumario.rv0` e `ena.pdf`), em `data/raw/ons_decomp/<ano>/<ano>_<mes>/` | ONS | Jan–out/2026 recebidos; `sumario.rv0` conferido contra os boletins; `ena.pdf` ainda não lido |
 | GSF histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Geração hidráulica do MRE e garantia física | CCEE | Pendente |
 | ENA e EAR por subsistema | ONS | Pendente |
@@ -243,7 +247,7 @@ solar centralizada e intercâmbio internacional. Ver Q16.
 | Geração eólica, solar e térmica (realizada) | ONS | Disponível (a trazer) |
 | GFOM (despacho fora da ordem de mérito) | ONS/CCEE | Pendente |
 | PLD gatilho histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
-| Memória de cálculo mensal da bandeira (PDF), em `data/raw/ccee_calculo_bandeira/<ano>/` | CCEE | 2026: jan–out recebidos, **falta maio (nº 97)**; 2019–2025 a trazer (Q12) |
+| Memória de cálculo mensal da bandeira (PDF), em `data/raw/ccee_calculo_bandeira/<ano>/` | CCEE | 2026: jan–out completos; 2019–2025 a trazer (Q12) |
 | Previsão sazonal de ENA (% MLT) | ECMWF SEAS5 | A verificar (incluindo hindcasts) |
 | Curva forward de PLD | Dcide | A verificar (histórico de curvas) |
 

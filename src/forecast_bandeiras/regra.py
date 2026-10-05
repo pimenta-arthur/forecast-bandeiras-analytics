@@ -97,3 +97,17 @@ def cor_bandeira(gsf: float, pld_gatilho: float) -> str:
         if x <= limite:
             return cor
     return "Vermelha 2"
+
+
+def serie_gh_band(ano: int, meses=range(1, 13)) -> pd.DataFrame:
+    """Calcula o GH_band e as parcelas para vários meses de um ano.
+
+    Meses sem `sumario.rv0` em data/raw/ons_decomp/ são ignorados.
+    Retorna um DataFrame indexado pelo mês (Period mensal).
+    """
+    linhas = {}
+    for mes in meses:
+        if not load.caminho_sumario(ano, mes).exists():
+            continue
+        linhas[pd.Period(f"{ano}-{mes:02d}", "M")] = calcular_gh_band(ano, mes)
+    return pd.DataFrame.from_dict(linhas, orient="index").rename_axis("mes")
