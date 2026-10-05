@@ -1,10 +1,14 @@
 # forecast-bandeiras
 
 ## Objetivo do projeto
-Prever uma variável alvo a partir de variáveis de entrada.
+Prever a bandeira tarifária mensal (M+1 até no mínimo M+6), em cenários LI / esperado / LS.
 
-- **Variável alvo:** TODO
-- **Variáveis de entrada:** TODO
+- **Variável alvo:** bandeira tarifária do mês. A abordagem é prever os insumos da regra (GSF, depois PLD) e aplicar o ábaco da ANEEL.
+- **Variáveis de entrada:** em definição (ENA, carga, geração hidráulica, garantia física, PLD, GFOM...).
+
+**A metodologia, as decisões e as questões em aberto ficam em `docs/metodologia.md`.** Ler antes de propor abordagens e registrar ali toda nova decisão (com ID, data, motivo e status). Tratar o conteúdo como hipótese até ser verificado.
+
+**⚠️ Ponto crítico — fontes do boletim da bandeira:** todas as variáveis da memória de cálculo da CCEE (geração hidráulica, ANDE, PCH, GSF etc.) vêm do `sumario.rv0` do PMO do **ONS**, **exceto o PLD gatilho**, que vem do deck do DECOMP da **CCEE** usado no cálculo do PLD (`cmdeco.rv0`). **CMO do ONS ≠ PLD gatilho:** nunca usar o CMO do `sumario.rv0` como PLD.
 
 ## Fase atual
 Preparação / análise exploratória. **Não treinar modelos sem pedido explícito.**
@@ -19,13 +23,15 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 - `data/raw/` — dados originais, **somente leitura** (nunca modificar ou sobrescrever).
 - `data/processed/` — dados limpos, em parquet.
 - `notebooks/` — `01_eda`, `02_features`, `03_modelagem`.
-- `src/forecast_bandeiras/` — `load.py`, `features.py`, `models.py`.
+- `src/forecast_bandeiras/` — `load.py` (leitura de `sumario.rv0` e patamares), `regra.py` (GH_band, GSF e cor pelo ábaco), `features.py`, `models.py`.
 - `reports/figures/` — gráficos em PNG.
+- `docs/metodologia.md` — raciocínio, registro de decisões e questões em aberto.
 
 ## Convenções
 - Funções reutilizáveis ficam em `src/forecast_bandeiras/`; os notebooks apenas orquestram (importam e chamam).
 - Gráficos relevantes são salvos em `reports/figures/` (PNG).
 - Código e comentários em português.
+- Responder sempre em português do Brasil.
 - Lint/format com `uv run ruff check` e `uv run ruff format`.
 
 ## Boas práticas de modelagem

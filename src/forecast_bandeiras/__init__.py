@@ -2,4 +2,6 @@
 
 
 def main() -> None:
-    print("forecast-bandeiras: use os notebooks em notebooks/ para orquestrar a análise.")
+    print(
+        "forecast-bandeiras: use os notebooks em notebooks/ para orquestrar a análise."
+    )

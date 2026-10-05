@@ -9,12 +9,6 @@ wheels/
 # Ambiente virtual
 .venv/
 
-# Dados (não versionar; manter apenas os .gitkeep)
-data/raw/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
-
 # Jupyter
 .ipynb_checkpoints/
 
