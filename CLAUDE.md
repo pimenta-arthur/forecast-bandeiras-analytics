@@ -23,7 +23,7 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 - `data/raw/` — dados originais, **somente leitura** (nunca modificar ou sobrescrever).
 - `data/processed/` — dados limpos, em parquet.
 - `notebooks/` — `01_eda`, `02_features`, `03_modelagem`.
-- `src/forecast_bandeiras/` — `load.py` (leitura de `sumario.rv0` e patamares), `regra.py` (GH_band, GSF e cor pelo ábaco), `features.py` (balanço e base mensal), `graficos.py` (figuras da EDA), `models.py`.
+- `src/forecast_bandeiras/` — `load.py` (leitura de `sumario.rv0` e patamares), `regra.py` (GH_band, GSF e cor pelo ábaco), `features.py` (balanço e base mensal), `graficos.py` (figuras da EDA), `models.py`. Leitura do DECOMP: `sumario.rv0`, `relato.rv0` (balanço e térmica inflexível × mérito) e `renovaveis.csv`.
 - `reports/figures/` — gráficos em PNG.
 - `docs/metodologia.md` — raciocínio, registro de decisões e questões em aberto.
 

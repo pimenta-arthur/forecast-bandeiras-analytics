@@ -183,8 +183,8 @@ do fim do mês (24 h). O relatório de EAR por cenário também traz uma coluna 
 - `CUSTO MARGINAL DE OPERACAO`: CMO do PMO do ONS. **Não é o PLD gatilho** (ver aviso na seção 3.1); não usar como PLD.
 
 **Não encontrado no `sumario.rv0`:** geração eólica e solar centralizadas. No balanço de out/2026 (Sem_02, patamar 1),
-demanda de 91.169 contra 76.680 de hidráulica + térmica + pequenas usinas: faltam ~14,5 GW, provavelmente eólica,
-solar centralizada e intercâmbio internacional. Ver Q16.
+demanda de 91.169 contra 76.680 de hidráulica + térmica + pequenas usinas: faltam ~14,5 GW. **Resolvido:** são a eólica e a
+solar centralizadas do `renovaveis.csv` (seção 3.4); o pouco que sobra é bombeamento (seção 3.6).
 
 ### 3.4 Balanço do DECOMP e renováveis centralizadas (out/2026)
 
@@ -206,10 +206,10 @@ O `oper_parque_eolico.csv` (saída do modelo) traz os mesmos valores em out/2026
 | Pequenas usinas (PCH, PCT e MMGD; MMGD = 9.190) | `sumario.rv0` | 17.120 |
 | Eólica centralizada (NE = 13.915) | `renovaveis.csv` | 14.789 |
 | Solar centralizada | `renovaveis.csv` | 4.837 |
-| **Diferença não explicada** | | **−65 (0,08% da demanda)** |
+| **Diferença** = consumo de bombeamento (`relato.rv0`, ver 3.6) | | **−65,9** |
 
 O balanço fecha também por patamar (renováveis vs. resíduo: pesado 16.018 vs. 16.006; médio 21.086 vs. 21.023; leve 19.674 vs. 19.585).
-A diferença restante deve ser intercâmbio internacional ou arredondamento; irrelevante para a aproximação (D009).
+A diferença é o **consumo de bombeamento** das usinas elevatórias (`Cbomba` no `relato.rv0`, 65,9 MWmed): com ele, o balanço fecha em −0,08 MWmed.
 
 Implementação: `load.ler_renovaveis(ano, mes)`.
 
@@ -280,15 +280,46 @@ X = PLD × (1 − GSF) = 90,19 × 0,18 = 16,2 ≤ 27,48 → **Verde** (Verde). S
 | − PCT (pequenas térmicas: biomassa, cogeração) | `sumario.rv0`, linhas `*_PCT` | 4.785,1 |
 | = Hidráulica para o SIN esperada | | 42.776,9 |
 | Hidráulica para o SIN do DECOMP (GH ONS − ANDE) | Passo 3 | 42.842,8 |
-| **Resíduo** (intercâmbio internacional, arredondamento) | | **−65,9 (0,09% da carga)** |
+| **Resíduo** = −consumo de bombeamento (`Cbomba`, `relato.rv0`: 65,9) | | **−65,9 → fecha em −0,08** |
 
 Variável derivada usada na análise: **carga residual** = carga líquida − eólica − solar − PCH − PCT − nuclear = 47.189,3,
 isto é, o que sobra para hidráulica + térmica não nuclear (hidráulica para o SIN ≈ carga residual − térmica sem nuclear).
+
+**Passo 7b — Térmica inflexível × mérito** (`relato.rv0`, `load.ler_relato_termicas`). Para cada usina, semana e patamar:
+inflexível = min(geração, GTmin); mérito = geração − inflexível. Out/2026: térmica 5.762,5 = inflexível 5.278,3
+(nuclear 1.350,0 + demais 3.928,3) + mérito 484,2 MWmed.
 
 **Passo 8 — ENA e armazenamento** (variáveis explicativas). ENA prevista do mês por subsistema, em MWmed e % MLT
 (`ena.pdf`, Tabela 6, coluna "Previsão Mensal Inicial"): SE 24.870 (105%), S 26.506 (193%), NE 1.929 (61%), N 1.020 (43%);
 SIN 54.325 (126,5% MLT, ponderado pela MLT). EAR inicial (`sumario.rv0`, `ENERGIA ARMAZENADA NOS SUBSISTEMAS`):
 SE 57,4%, S 82,9%, NE 69,6%, N 74,3%; SIN 62,4% (ponderado pela EARmax dos REEs).
+
+### 3.6 O `relato.rv0` (DECOMP rv0) e a separação da térmica
+
+O `relato.rv0` é o relatório completo do DECOMP (5,5 MB/mês; o `sumario.rv0` é um resumo dele). Blocos usados:
+
+| Bloco | Conteúdo | Uso |
+|---|---|---|
+| `RELATORIO  DO  BALANCO  ENERGETICO` | Por semana, subsistema e patamar: `Mercado` (carga bruta), `PQUsi` (pequenas usinas, inclui MMGD), `Cbomba` (bombeamento), `Ghid` (no SE inclui Itaipu 50 Hz), `Gter`, `Geol` (eólica + solar centralizadas), intercâmbios, `Itaipu50`, `Itaipu60`; EAR e ENA semanais | Balanço; GH ONS = Σ `Ghid` + `Itaipu60` |
+| `RELATORIO  DA  OPERACAO  TERMICA E CONTRATOS` | Geração por usina, subsistema e patamar, com flag `I` (gerando no GTmin) ou `S` (no GTmax); sem flag = entre os dois | Térmica por usina |
+| `Relatorio  dos  Dados  de  Usinas  Termicas` | GTmin, GTmax e custo por usina, estágio e patamar | Inflexibilidade |
+| `Relatorio dos Dados de Pequenas Usinas` | PCH, PCT e MMGD (`*gd`) por subsistema e estágio | Igual ao `sumario.rv0` |
+| `Relatorio de eco das informacoes de ITAIPU` | ANDE por período e patamar | Igual ao `sumario.rv0` |
+
+**Equivalência com `sumario.rv0` + `renovaveis.csv` (out/2026, média do mês):** carga bruta 85.286,2, pequenas usinas
+17.120,5, térmica 5.762,5, eólica + solar 19.626,4 e GH ONS 46.287,3 — **diferença zero** em todas.
+
+**Flags da operação térmica** (verificado contra o cadastro em out/2026): toda geração com `I` é igual ao GTmin e toda com
+`S` é igual ao GTmax da usina; nenhuma usina gera abaixo do GTmin. A legenda não está no arquivo; a interpretação vem dessa
+verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.938,9 em out/2026), porque usinas acima do mínimo
+(ex.: UTE MAUA 3, GTmin 264, gerando 426) não levam flag. Por isso a parcela inflexível é min(geração, GTmin).
+
+**O que só cada arquivo tem:**
+- `relato.rv0`: bombeamento, GTmin/GTmax e flags (separação inflexível × mérito), intercâmbios.
+- `renovaveis.csv`: eólica e solar **separadas** (o `relato` traz só `Geol`, a soma das duas, por subsistema).
+- `sumario.rv0`: nada exclusivo; tudo o que usamos dele também está no `relato`.
+
+**Origem da nuclear (antes do `relato`):** linhas `ANGRA 1` e `ANGRA 2` do bloco `GERACAO TERMICA` do `sumario.rv0`; o `relato` confirma (1.350 MWmed em out/2026).
 
 ---
 
@@ -317,6 +348,7 @@ SE 57,4%, S 82,9%, NE 69,6%, N 74,3%; SIN 62,4% (ponderado pela EARmax dos REEs)
 | D019 | 2026-10-05 | Renováveis centralizadas do `renovaveis.csv` de cada mês (períodos das semanas do mês, cenário 1); o `oper_parque_eolico.csv` não é necessário | Fecha o balanço de out/2026 com erro de 0,08% | Decidido |
 | D020 | 2026-10-05 | Carga para o forecast: a fonte de projeção tem carga bruta e líquida (sem MMGD) por submercado; usar a **líquida**, com a mesma definição no histórico (demanda bruta do `sumario.rv0` − MMGD das linhas `*gd`) | Evita prever a MMGD separadamente; as duas são equivalentes se a definição for a mesma | Proposta (conferir a equivalência quando a projeção chegar) |
 | D021 | 2026-10-05 | Hipótese de trabalho para a etapa 1: GH_band ≈ f(carga residual − térmica sem nuclear). Carga, renováveis, PCH, PCT e nuclear vêm das projeções de entrada; a térmica sem nuclear é a parcela a modelar com a hidrologia (ENA do ECMWF, EAR) | Carga residual explica o GH_band com r = 0,99 em 2026; a ENA só deve agir via despacho térmico | Proposta (validar com histórico que tenha anos secos, ex.: 2021) |
+| D022 | 2026-10-05 | Arquivos do DECOMP por mês: `relato.rv0` (balanço, térmica inflexível × mérito, bombeamento) + `renovaveis.csv` (eólica e solar separadas). O `sumario.rv0` fica redundante; manter os já baixados e migrar a leitura para o `relato` quando houver todos os meses | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica | Proposta (decisão do usuário sobre manter o `sumario`) |
 
 ## 5. Questões em aberto
 
@@ -345,7 +377,8 @@ SE 57,4%, S 82,9%, NE 69,6%, N 74,3%; SIN 62,4% (ponderado pela EARmax dos REEs)
 | Regra/ábaco vigente e REH 3.306/2024 (PDF), em `docs/referencias/` | ANEEL | Recebido; constantes do ábaco e tabela de GFOM conferidas |
 | Patamares de carga (horário `AAC001` e semanal `AAC002`), em `data/raw/patamar/<ano>/` | CCEE | 2025 e 2026 recebidos e conferidos |
 | Deck do DECOMP da CCEE para o PLD (`cmdeco.rv0`) — etapa 2 | CCEE | A trazer na etapa 2 |
-| Renováveis centralizadas (`renovaveis.csv`), na pasta mensal do DECOMP | ONS | Out/2026 recebido e conferido; demais meses a trazer |
+| Renováveis centralizadas (`renovaveis.csv`), na pasta mensal do DECOMP | ONS | Jan–out/2026 |
+| Relatório completo do DECOMP (`relato.rv0`), na pasta mensal | ONS | Out/2026 recebido e conferido; demais meses a trazer |
 | Saídas do DECOMP rv0 por mês (`sumario.rv0` e `ena.pdf`), em `data/raw/ons_decomp/<ano>/<ano>_<mes>/` | ONS | Jan–out/2026 recebidos; `sumario.rv0` conferido contra os boletins; `ena.pdf` ainda não lido |
 | GSF histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Geração hidráulica do MRE e garantia física | CCEE | Pendente |
@@ -386,7 +419,14 @@ Base: `data/processed/base_mensal_2026.parquet` (`features.base_mensal`). Gráfi
 3. **Queda do período seco:** de jan–abr para jun–set a hidráulica para o SIN caiu 13,8 mil MWmed: carga líquida
    −5,9 mil, eólica +5,9 mil (safra de ventos), PCT +2,9 mil (safra de biomassa), nuclear +0,7 mil, PCH −1,2 mil,
    solar −0,5 mil, térmica sem nuclear +0,1 mil.
-4. **ENA não aparece como motor direto em 2026:** correlação com a ENA em % MLT = −0,48; a correlação de 0,97 com a ENA
-   em MWmed é sazonalidade (período úmido = ENA alta, pouco vento, carga alta). A hidrologia deve agir pela térmica por
-   mérito, que quase não variou com o armazenamento confortável de 2026 (EAR do SIN entre 47% e 72%).
-5. **Limite:** 10 meses de um ano sem estresse hídrico. Correlações aqui descrevem 2026, não servem para estimar o modelo.
+4. **ENA (SIN) não acrescenta informação além da carga residual em 2026** (`reports/figures/04` e `05`):
+   - ENA em MWmed: r = 0,97 com o GH_band, mas r = 0,96 com a carga residual — sazonalidade compartilhada (período úmido =
+     muita água, pouco vento, carga alta), não causa.
+   - ENA em % MLT: r = −0,48. No 2º semestre a ENA ficou acima da média (103% a 126%) e o GH_band continuou baixo.
+   - GH_band ≈ 0,986 × carga residual − 4.216 (desvio do resíduo 926 MWmed). O resíduo não acompanha a ENA (r = 0,17 em
+     MWmed, −0,25 em % MLT) nem a EAR (−0,09); ele espelha a térmica sem nuclear (maio: térmica 3,4 mil, resíduo +1,9 mil;
+     setembro: térmica 6,5 mil, resíduo −1,4 mil).
+   - Térmica por mérito em out/2026: 484 de 5.762 MWmed (92% inflexível). O canal hidrologia → térmica → hidráulica quase
+     não operou em 2026 (EAR do SIN entre 47% e 72%).
+5. **ENA em MWmed e GH não fecham balanço:** a ENA usa produtividade de referência e conta cada afluência em toda a cascata, sem descontar vertimento e usos consuntivos; não comparar as duas como "água que entra × água que sai".
+6. **Limite:** 10 meses de um ano sem estresse hídrico. Correlações aqui descrevem 2026, não servem para estimar o modelo.

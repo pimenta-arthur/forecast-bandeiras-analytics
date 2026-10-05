@@ -145,29 +145,24 @@ def gh_vs_carga_residual(
     return _salvar(fig, nome)
 
 
-def dispersoes_gh(base: pd.DataFrame, nome: str = "03_gh_vs_variaveis.png") -> Path:
-    """GH_band contra ENA (% MLT), EAR inicial e carga residual, um painel por variável."""
-    paineis = {
-        "ENA prevista do mês (% MLT, SIN)": base.ena_mlt_sin,
-        "EAR inicial (% EARmax, SIN)": base.ear_ini_sin,
-        "Carga residual (MWmed)": base.carga_residual,
-    }
+def _paineis_dispersao(
+    base: pd.DataFrame, y: pd.Series, paineis: dict, titulo: str, ylabel: str, nome: str
+) -> Path:
+    """Um painel de dispersão por variável x (eixos x próprios, mesmo eixo y), com r de Pearson."""
     fig, eixos = plt.subplots(
-        1, 3, figsize=(13, 4.2), facecolor=SUPERFICIE, sharey=True
+        1,
+        len(paineis),
+        figsize=(4.3 * len(paineis), 4.2),
+        facecolor=SUPERFICIE,
+        sharey=True,
     )
-    for ax, (rotulo, x) in zip(eixos, paineis.items()):
+    # Meses do período seco ficam muito próximos: rótulos alternados acima/abaixo.
+    deslocamento = {"jun": (6, -12), "jul": (-20, -12), "ago": (6, 6), "fev": (6, -12)}
+    for ax, (rotulo, (x, milhar)) in zip(eixos, paineis.items()):
         ax.scatter(
-            x,
-            base.gh_band,
-            s=60,
-            color=SERIES[0],
-            edgecolor=SUPERFICIE,
-            linewidth=2,
-            zorder=3,
+            x, y, s=60, color=SERIES[0], edgecolor=SUPERFICIE, linewidth=2, zorder=3
         )
-        # Meses do período seco ficam muito próximos: rótulos alternados acima/abaixo.
-        deslocamento = {"jun": (6, -12), "jul": (-20, -12), "ago": (6, 6)}
-        for xi, yi, m in zip(x, base.gh_band, _rotulos_mes(base.index)):
+        for xi, yi, m in zip(x, y, _rotulos_mes(base.index)):
             ax.annotate(
                 m,
                 (xi, yi),
@@ -176,22 +171,103 @@ def dispersoes_gh(base: pd.DataFrame, nome: str = "03_gh_vs_variaveis.png") -> P
                 fontsize=8,
                 color=TEXTO_SEC,
             )
-        r = x.corr(base.gh_band)
-        _estilo(ax, f"r = {r:.2f}")
+        _estilo(ax, f"r = {x.corr(y):.2f}")
         ax.set_xlabel(rotulo, color=TEXTO_SEC, fontsize=9)
         ax.grid(axis="x", color=GRADE, linewidth=0.8)
+        if milhar:
+            _milhar(ax, "x")
+            ax.xaxis.set_major_locator(plt.MaxNLocator(4))
     _milhar(eixos[0])
-    _milhar(eixos[2], "x")
-    eixos[2].xaxis.set_major_locator(plt.MaxNLocator(5))
-    eixos[0].set_ylim(base.gh_band.min() - 2000, base.gh_band.max() + 1500)
-    eixos[0].set_ylabel("GH_band (MWmed)", color=TEXTO_SEC, fontsize=9)
-    fig.suptitle(
-        "GH_band contra as variáveis candidatas — 2026 (10 meses)",
-        x=0.01,
-        ha="left",
-        color=TEXTO,
-        fontsize=12,
-        fontweight="bold",
-    )
+    margem = (y.max() - y.min()) * 0.12
+    eixos[0].set_ylim(y.min() - margem, y.max() + margem)
+    eixos[0].set_ylabel(ylabel, color=TEXTO_SEC, fontsize=9)
+    fig.suptitle(titulo, x=0.01, ha="left", color=TEXTO, fontsize=12, fontweight="bold")
     fig.tight_layout()
     return _salvar(fig, nome)
+
+
+def dispersoes_gh(base: pd.DataFrame, nome: str = "03_gh_vs_variaveis.png") -> Path:
+    """GH_band contra ENA (MWmed e % MLT), EAR inicial e carga residual (SIN)."""
+    paineis = {
+        "ENA prevista do mês (MWmed, SIN)": (base.ena_sin, True),
+        "ENA prevista do mês (% MLT, SIN)": (base.ena_mlt_sin, False),
+        "EAR inicial (% EARmax, SIN)": (base.ear_ini_sin, False),
+        "Carga residual (MWmed)": (base.carga_residual, True),
+    }
+    return _paineis_dispersao(
+        base,
+        base.gh_band,
+        paineis,
+        "GH_band contra as variáveis candidatas — SIN, 2026 (10 meses)",
+        "GH_band (MWmed)",
+        nome,
+    )
+
+
+def gh_vs_ena(base: pd.DataFrame, nome: str = "04_gh_vs_ena.png") -> Path:
+    """GH_band e ENA prevista do SIN ao longo dos meses (MWmed), com a ENA em % MLT nos pontos."""
+    x = list(range(len(base)))
+    fig, ax = plt.subplots(figsize=(10, 4.5), facecolor=SUPERFICIE)
+    ax.plot(
+        x,
+        base.ena_sin,
+        color=SERIES[0],
+        linewidth=2,
+        marker="o",
+        markersize=5,
+        label="ENA prevista do mês (SIN)",
+    )
+    ax.plot(
+        x,
+        base.gh_band,
+        color=SERIES[1],
+        linewidth=2,
+        marker="o",
+        markersize=5,
+        label="GH_band",
+    )
+    for xi, v, mlt in zip(x, base.ena_sin, base.ena_mlt_sin):
+        ax.annotate(
+            f"{mlt:.0f}% MLT",
+            (xi, v),
+            xytext=(0, 10),
+            textcoords="offset points",
+            ha="center",
+            fontsize=8,
+            color=TEXTO_SEC,
+        )
+    _estilo(
+        ax,
+        "ENA prevista e GH_band do SIN (MWmed); rótulos: ENA em % da MLT",
+    )
+    _milhar(ax)
+    ax.set_ylim(0, base.ena_sin.max() * 1.15)
+    ax.set_xticks(x, _rotulos_mes(base.index))
+    ax.legend(
+        frameon=False,
+        fontsize=9,
+        labelcolor=TEXTO_SEC,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.08),
+        ncol=2,
+    )
+    return _salvar(fig, nome)
+
+
+def residuo_vs_ena(
+    base: pd.DataFrame, residuo: pd.Series, nome: str = "05_residuo_vs_ena.png"
+) -> Path:
+    """Resíduo do GH_band depois de descontar a carga residual, contra ENA e EAR (SIN)."""
+    paineis = {
+        "ENA prevista do mês (MWmed, SIN)": (base.ena_sin, True),
+        "ENA prevista do mês (% MLT, SIN)": (base.ena_mlt_sin, False),
+        "EAR inicial (% EARmax, SIN)": (base.ear_ini_sin, False),
+    }
+    return _paineis_dispersao(
+        base,
+        residuo,
+        paineis,
+        "O que sobra do GH_band depois da carga residual não acompanha a ENA — SIN, 2026",
+        "Resíduo de GH_band ~ carga residual (MWmed)",
+        nome,
+    )

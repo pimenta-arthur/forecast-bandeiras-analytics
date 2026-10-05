@@ -348,3 +348,134 @@ def ler_boletim(ano: int, mes: int) -> dict:
     )
     saida["cor"] = m.group(1).strip() if m else None
     return saida
+
+
+# ---------------------------------------------------------------------------
+# Relato do DECOMP rv0 (ONS): balanço energético e operação térmica
+# ---------------------------------------------------------------------------
+
+
+def caminho_relato(ano: int, mes: int) -> Path:
+    """Caminho do relato.rv0 do PMO de um mês."""
+    return caminho_sumario(ano, mes).parent / "relato.rv0"
+
+
+def _linhas_relato(ano: int, mes: int) -> list[str]:
+    return caminho_relato(ano, mes).read_text(encoding="latin-1").splitlines()
+
+
+def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
+    """Lê o RELATORIO DO BALANCO ENERGETICO: uma linha por semana, subsistema e patamar (MWmed).
+
+    Colunas: mercado (carga bruta), pqusi (pequenas usinas, inclui MMGD), cbomba (consumo de
+    bombeamento), ghid (hidráulica; no SE inclui Itaipu 50 Hz), gter, geol (eólica + solar
+    centralizadas), it50 e it60 (Itaipu, só no SE). GH ONS = soma de ghid + it60.
+    Só as semanas do mês (o último estágio, mês seguinte, é descartado).
+    """
+    n_sem = horas_por_semana(ano, mes).shape[1]
+    numero = r"\s+([-\d.]+)"
+    padrao = re.compile(r"\s+Pat_(\d)" + numero * 10)
+    linhas, semana, sub = [], None, None
+    for ln in _linhas_relato(ano, mes):
+        m = re.search(r"SEMANA (\d) - ESTAGIO", ln)
+        if m:
+            semana = int(m.group(1))
+        m = re.match(r"\s+Subsistema (\w+)\s*$", ln)
+        if m:
+            sub = m.group(1)
+        m = padrao.match(ln)
+        if m and semana and sub:
+            v = [float(x) for x in m.groups()[1:]]
+            it50, it60 = (float(x) for x in ln.split()[-2:]) if sub == "SE" else (0, 0)
+            linhas.append(
+                {
+                    "semana": semana,
+                    "subsistema": sub,
+                    "pat": int(m.group(1)),
+                    "mercado": v[0],
+                    "pqusi": v[1],
+                    "cbomba": v[2],
+                    "ghid": v[3],
+                    "gter": v[4],
+                    "geol": v[6],
+                    "it50": it50,
+                    "it60": it60,
+                }
+            )
+    df = pd.DataFrame(linhas).drop_duplicates(["semana", "subsistema", "pat"])
+    return df[df.semana <= n_sem].reset_index(drop=True)
+
+
+def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
+    """Geração térmica por usina, semana e patamar, com GTmin/GTmax do cadastro (MWmed).
+
+    Junta o RELATORIO DA OPERACAO TERMICA E CONTRATOS (geração e flag: I = no mínimo,
+    S = no máximo, vazio = entre os dois) com o Relatorio dos Dados de Usinas Termicas
+    (GTmin e GTmax por estágio e patamar). A parcela inflexível de cada usina é
+    min(geração, GTmin); somar só as linhas com flag I subestima a inflexibilidade,
+    porque usinas acima do mínimo não levam a flag.
+    """
+    linhas = _linhas_relato(ano, mes)
+
+    inicio = next(
+        i
+        for i, ln in enumerate(linhas)
+        if ln.strip() == "Relatorio  dos  Dados  de  Usinas  Termicas"
+    )
+    cadastro, usina = [], None
+    for ln in linhas[inicio + 5 :]:
+        if ln.strip().startswith("X-"):
+            break
+        m = re.match(r"\s+\d+ (.{10})\s+(\w+)\s+(\d+)\s+(.*)", ln)
+        if m:
+            usina = (m.group(1).strip(), m.group(2))
+            estagio, valores = int(m.group(3)), m.group(4).split()
+        else:
+            m = re.match(r"\s+(\d+)\s+([\d.]+\s.*)", ln)
+            if not m or usina is None:
+                continue
+            estagio, valores = int(m.group(1)), m.group(2).split()
+        valores = [float(x) for x in valores]
+        for p in range(3):
+            cadastro.append(
+                {
+                    "usina": usina[0],
+                    "subsistema": usina[1],
+                    "semana": estagio,
+                    "pat": p + 1,
+                    "gtmin": valores[3 * p],
+                    "gtmax": valores[3 * p + 1],
+                }
+            )
+
+    flag = r"\s+([\d.]+)([IS]?)"
+    padrao = re.compile(r"\s+(SE|S|NE|N|FC)\s+(.{10})" + flag * 3 + r"\s+[\d.]+")
+    operacao, semana = [], None
+    for i, ln in enumerate(linhas):
+        if "RELATORIO  DA  OPERACAO  TERMICA E CONTRATOS" in ln:
+            semana = int(re.search(r"SEMANA (\d)", linhas[i + 2]).group(1))
+            continue
+        if "RELATORIO  DO  BALANCO  ENERGETICO" in ln:
+            semana = None
+        m = padrao.match(ln) if semana else None
+        if m:
+            for p in range(3):
+                operacao.append(
+                    {
+                        "semana": semana,
+                        "subsistema": m.group(1),
+                        "usina": m.group(2).strip(),
+                        "pat": p + 1,
+                        "ger": float(m.group(3 + 2 * p)),
+                        "flag": m.group(4 + 2 * p),
+                    }
+                )
+
+    df = pd.DataFrame(operacao).merge(
+        pd.DataFrame(cadastro), on=["usina", "subsistema", "semana", "pat"], how="left"
+    )
+    if df.gtmin.isna().any():
+        raise ValueError(f"usinas sem cadastro: {df[df.gtmin.isna()].usina.unique()}")
+    df["inflexivel"] = np.minimum(df.ger, df.gtmin)
+    df["nuclear"] = df.usina.str.startswith("ANGRA")
+    return df

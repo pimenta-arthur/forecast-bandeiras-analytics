@@ -53,9 +53,27 @@ def balanco_mes(ano: int, mes: int) -> dict:
         - linha["pct"]
         - linha["nuclear"]
     )
+    # Fecha a menos do consumo de bombeamento (usinas elevatórias), que só está no relato.
     linha["residuo"] = (
         linha["carga_residual"] - linha["termica_sem_nuclear"] - linha["gh_sin"]
     )
+
+    # Separação da térmica (inflexível x mérito) e bombeamento: só com relato.rv0.
+    if load.caminho_relato(ano, mes).exists():
+        bal = load.ler_relato_balanco(ano, mes)
+        ter = load.ler_relato_termicas(ano, mes)
+
+        def media_df(d, col):
+            tabela = d.groupby(["pat", "semana"])[col].sum().unstack()
+            tabela = tabela.reindex(index=[1, 2, 3], columns=horas.columns).fillna(0)
+            return media(tabela.to_numpy())
+
+        linha["bombeamento"] = media_df(bal, "cbomba")
+        linha["termica_inflexivel"] = media_df(ter, "inflexivel")
+        linha["termica_inflexivel_sem_nuclear"] = media_df(
+            ter[~ter.nuclear], "inflexivel"
+        )
+        linha["termica_merito"] = linha["termica"] - linha["termica_inflexivel"]
 
     for sub, r in ena.iterrows():
         linha[f"ena_{sub}"] = r.ena_mes
