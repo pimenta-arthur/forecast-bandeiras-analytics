@@ -158,6 +158,11 @@ def ler_sumario(ano: int, mes: int) -> dict:
     }
 
 
+def caminho_renovaveis(ano: int, mes: int) -> Path:
+    """Caminho do renovaveis.csv (entrada do DECOMP, só a partir de 2026 na base)."""
+    return caminho_sumario(ano, mes).parent / "renovaveis.csv"
+
+
 def ler_renovaveis(ano: int, mes: int) -> dict:
     """Lê a geração eólica e solar centralizadas do renovaveis.csv (entrada do DECOMP).
 
@@ -168,7 +173,7 @@ def ler_renovaveis(ano: int, mes: int) -> dict:
     Retorna um dicionário (fonte, subsistema) -> array patamar x semana, em MW,
     com fonte "EOL" ou "UFV" e subsistema SE, S, NE ou N.
     """
-    caminho = caminho_sumario(ano, mes).parent / "renovaveis.csv"
+    caminho = caminho_renovaveis(ano, mes)
     linhas = [
         ln
         for ln in caminho.read_text(encoding="latin-1").splitlines()
@@ -339,8 +344,27 @@ def ler_boletim(ano: int, mes: int) -> dict:
         raise ValueError(
             f"{caminho.name}: esperados 3 PLDs na Tabela 15, encontrados {len(plds)}"
         )
-    saida["pld_gatilho"] = sorted(plds)[1]
-    # Cor: o texto às vezes traz o nome do mês errado (ex.: maio/2026 cita fevereiro).
+    saida["pld_min"], saida["pld_gatilho"], saida["pld_max"] = sorted(plds)
+
+    # Campos opcionais (None se o layout do boletim não permitir a leitura).
+    opcionais = {
+        "gh_ons": r"GH ONS ([\d.]+)",
+        "ande": r"ANDE \+ C\. I\. Itaipu ([\d.]+)",
+        "f_bruta_conexao": r"Bruta p/ Conexão\) ([\d,]+)%",
+        "f_conexao_cg": r"Hidráulica \(Conexão p/ Centro de Gravidade\) ([\d,]+)%",
+        "f_part_pch": r"Participação de PCH e CGH no MRE ([\d,]+)%",
+        "f_perda_pch": r"Perda de PCH e CGH \(Conexão p/ Centro de Gravidade\) ([\d,]+)%",
+        "gfom": r"𝑮𝑭𝑶𝑴\s*\(𝑴𝑾𝒎𝒆𝒅\)\s*([\d.,]+)",
+    }
+    for chave, padrao in opcionais.items():
+        m = re.search(padrao, texto)
+        saida[chave] = _num_br(m.group(1)) if m else None
+    for chave in ("f_bruta_conexao", "f_conexao_cg", "f_part_pch", "f_perda_pch"):
+        if saida[chave] is not None:
+            saida[chave] /= 100
+
+    # Cor: em alguns boletins a Tabela 17 é imagem (sem texto); aí fica None.
+    # O texto às vezes traz o nome do mês errado (ex.: maio/2026 cita fevereiro).
     m = re.search(
         rf"\w+ [Dd]e {ano} (Verde|Amarela|Vermelha(?: Patamar)? ?\d?)\s*$",
         texto,
@@ -367,15 +391,25 @@ def _linhas_relato(ano: int, mes: int) -> list[str]:
 def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
     """Lê o RELATORIO DO BALANCO ENERGETICO: uma linha por semana, subsistema e patamar (MWmed).
 
-    Colunas: mercado (carga bruta), pqusi (pequenas usinas, inclui MMGD), cbomba (consumo de
-    bombeamento), ghid (hidráulica; no SE inclui Itaipu 50 Hz), gter, geol (eólica + solar
-    centralizadas), it50 e it60 (Itaipu, só no SE). GH ONS = soma de ghid + it60.
-    Só as semanas do mês (o último estágio, mês seguinte, é descartado).
+    As colunas são localizadas pelo cabeçalho de cada tabela, porque o layout mudou ao longo
+    do tempo (até set/2025 não há `Geol` e as pequenas usinas se chamam `Bacia`):
+    mercado (carga bruta), pqusi (pequenas usinas, inclui MMGD), cbomba (bombeamento),
+    ghid (hidráulica; no SE inclui Itaipu 50 Hz), gter, gterat (térmica antecipada),
+    geol (eólica + solar centralizadas, a partir de out/2025), it50 e it60 (Itaipu, só no SE).
+    GH ONS = soma de ghid + it60. Só as semanas do mês (o mês seguinte é descartado).
     """
     n_sem = horas_por_semana(ano, mes).shape[1]
-    numero = r"\s+([-\d.]+)"
-    padrao = re.compile(r"\s+Pat_(\d)" + numero * 10)
-    linhas, semana, sub = [], None, None
+    nomes = {
+        "Mercado": "mercado",
+        "PQUsi": "pqusi",
+        "Bacia": "pqusi",
+        "Cbomba": "cbomba",
+        "Ghid": "ghid",
+        "Gter": "gter",
+        "GterAT": "gterat",
+        "Geol": "geol",
+    }
+    linhas, semana, sub, colunas = [], None, None, None
     for ln in _linhas_relato(ano, mes):
         m = re.search(r"SEMANA (\d) - ESTAGIO", ln)
         if m:
@@ -383,27 +417,23 @@ def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
         m = re.match(r"\s+Subsistema (\w+)\s*$", ln)
         if m:
             sub = m.group(1)
-        m = padrao.match(ln)
-        if m and semana and sub:
-            v = [float(x) for x in m.groups()[1:]]
+        if ln.split()[:1] == ["Mercado"]:
+            cabecalho = ln.split()
+            colunas = cabecalho[: cabecalho.index("Interligacao")]
+            continue
+        m = re.match(r"\s+Pat_(\d)\s+(.*)", ln)
+        if m and semana and sub and colunas:
+            valores = [float(x) for x in m.group(2).split()[: len(colunas)]]
+            linha = {"semana": semana, "subsistema": sub, "pat": int(m.group(1))}
+            linha.update({nomes[c]: v for c, v in zip(colunas, valores) if c in nomes})
             it50, it60 = (float(x) for x in ln.split()[-2:]) if sub == "SE" else (0, 0)
-            linhas.append(
-                {
-                    "semana": semana,
-                    "subsistema": sub,
-                    "pat": int(m.group(1)),
-                    "mercado": v[0],
-                    "pqusi": v[1],
-                    "cbomba": v[2],
-                    "ghid": v[3],
-                    "gter": v[4],
-                    "geol": v[6],
-                    "it50": it50,
-                    "it60": it60,
-                }
-            )
+            linha.update({"it50": it50, "it60": it60})
+            linhas.append(linha)
     df = pd.DataFrame(linhas).drop_duplicates(["semana", "subsistema", "pat"])
-    return df[df.semana <= n_sem].reset_index(drop=True)
+    for coluna in ("geol", "gterat"):
+        if coluna not in df:
+            df[coluna] = 0.0
+    return df[df.semana <= n_sem].fillna(0.0).reset_index(drop=True)
 
 
 def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
@@ -479,3 +509,85 @@ def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
     df["inflexivel"] = np.minimum(df.ger, df.gtmin)
     df["nuclear"] = df.usina.str.startswith("ANGRA")
     return df
+
+
+def ler_relato_pequenas(ano: int, mes: int) -> pd.DataFrame:
+    """Lê o Relatorio dos Dados de Pequenas Usinas: geração por usina, subsistema, semana e patamar (MW).
+
+    Colunas: tipo (PCH, PCT, EOL, UFV, PCHgd, PCTgd, EOLgd, UFVgd), subsistema, semana, pat, mw.
+    EOL e UFV (centralizadas) só aparecem até set/2025; a partir de out/2025 estão no `geol`
+    do balanço. As linhas `gd` (MMGD) só existem a partir de mai/2023.
+    """
+    n_sem = horas_por_semana(ano, mes).shape[1]
+    linhas = _linhas_relato(ano, mes)
+    inicio = next(
+        i
+        for i, ln in enumerate(linhas)
+        if ln.strip() == "Relatorio dos Dados de Pequenas Usinas"
+    )
+    saida, usina, bordas = [], None, 0
+    for ln in linhas[inicio + 1 :]:
+        if ln.strip().startswith("X-"):
+            bordas += 1
+            if bordas == 3:
+                break
+            continue
+        m = re.match(
+            r"\s+(SECO|SUL|NE|N)_(PCH|PCT|EOL|UFV)(gd)?\s+\w+\s+(\d+)\s+(.*)", ln
+        )
+        if m:
+            usina = (m.group(2) + (m.group(3) or ""), SUBSISTEMAS[m.group(1)])
+            estagio, valores = int(m.group(4)), m.group(5).split()
+        else:
+            m = re.match(r"\s+(\d+)\s+([\d.]+\s.*)", ln)
+            if not m or usina is None:
+                continue
+            estagio, valores = int(m.group(1)), m.group(2).split()
+        if estagio > n_sem:
+            continue
+        for p, v in enumerate(valores[:3], start=1):
+            saida.append(
+                {
+                    "tipo": usina[0],
+                    "subsistema": usina[1],
+                    "semana": estagio,
+                    "pat": p,
+                    "mw": float(v),
+                }
+            )
+    return pd.DataFrame(saida)
+
+
+def ler_relato_ande(ano: int, mes: int) -> pd.DataFrame:
+    """ANDE (Itaipu para o Paraguai + consumo interno) por semana e patamar (MWmed)."""
+    n_sem = horas_por_semana(ano, mes).shape[1]
+    linhas = _linhas_relato(ano, mes)
+    inicio = next(
+        i
+        for i, ln in enumerate(linhas)
+        if "Relatorio de eco  das informacoes de ITAIPU" in ln
+    )
+    saida = []
+    for ln in linhas[inicio + 5 :]:
+        if ln.strip().startswith("X-"):
+            break
+        per, pat, *_, ande = ln.split()
+        if int(per) <= n_sem:
+            saida.append({"semana": int(per), "pat": int(pat), "ande": float(ande)})
+    return pd.DataFrame(saida)
+
+
+def ler_relato_ear(ano: int, mes: int) -> pd.DataFrame:
+    """EAR inicial do mês por subsistema (cabeçalho do balanço da semana 1): MWmês e % EARmax."""
+    linhas = _linhas_relato(ano, mes)
+    inicio = next(
+        i for i, ln in enumerate(linhas) if "RELATORIO  DO  BALANCO  ENERGETICO" in ln
+    )
+    saida = {}
+    for i in range(inicio, inicio + 200):
+        m = re.match(r"\s+Subsistema (SE|S|NE|N)\s*$", linhas[i])
+        if m:
+            mwmes = float(re.search(r"EAR_ini:\s*([\d.]+)", linhas[i + 1]).group(1))
+            pct = float(linhas[i + 2].split()[0])
+            saida[m.group(1)] = {"ear_mwmes": mwmes, "ear_pct": pct}
+    return pd.DataFrame(saida).T

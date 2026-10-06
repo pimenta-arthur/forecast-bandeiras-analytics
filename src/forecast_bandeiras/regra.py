@@ -1,8 +1,8 @@
 """Regra de acionamento da bandeira tarifária.
 
 Reproduz a memória de cálculo do boletim InfoBandeira da CCEE: GH_band a partir do
-sumario.rv0 do PMO, GSF_band = GH_band / GF_band e a cor pelo ábaco da REH 3.306/2024.
-Detalhes e validação em docs/metodologia.md (seções 3.1 a 3.3).
+relato.rv0 do PMO (DECOMP rv0), GSF_band = GH_band / GF_band e a cor pelo ábaco da
+REH 3.306/2024. Detalhes e validação em docs/metodologia.md (seções 3.1 a 3.6).
 """
 
 import numpy as np
@@ -11,9 +11,28 @@ import pandas as pd
 from forecast_bandeiras import load
 
 # Fatores da CCEE aplicados à geração (Tabela 3 do boletim), em fração.
-# Cada conjunto vale a partir do mês indicado; são a média do ano anterior.
+# Cada conjunto vale a partir do mês indicado (média de um ano anterior, atualizada
+# por volta de março). Fonte: boletins InfoBandeira de 2023 a 2026.
 FATORES = {
-    "2026-01": {
+    "2023-01": {
+        "perda_bruta_conexao": 0.01458,
+        "perda_conexao_cg": 0.02506,
+        "part_pch_mre": 0.62464,
+        "perda_pch_cg": 0.00125,
+    },
+    "2023-03": {
+        "perda_bruta_conexao": 0.01275,
+        "perda_conexao_cg": 0.02595,
+        "part_pch_mre": 0.65089,
+        "perda_pch_cg": 0.00085,
+    },
+    "2024-04": {
+        "perda_bruta_conexao": 0.01391,
+        "perda_conexao_cg": 0.02342,
+        "part_pch_mre": 0.64795,
+        "perda_pch_cg": 0.00082,
+    },
+    "2025-03": {
         "perda_bruta_conexao": 0.01335,
         "perda_conexao_cg": 0.02151,
         "part_pch_mre": 0.64973,
@@ -47,23 +66,39 @@ def media_mensal(valores: np.ndarray, horas: pd.DataFrame) -> float:
     h = horas.to_numpy()
     if valores.shape != h.shape:
         raise ValueError(
-            f"sumário com {valores.shape} (patamar x semana), patamares com {h.shape}"
+            f"valores com {valores.shape} (patamar x semana), patamares com {h.shape}"
         )
     return float((valores * h).sum() / h.sum())
 
 
-def calcular_gh_band(ano: int, mes: int) -> dict:
-    """Calcula o GH_band do mês a partir do sumario.rv0 e das horas por patamar.
+def media_mensal_df(df: pd.DataFrame, coluna: str, horas: pd.DataFrame) -> float:
+    """Média mensal de uma coluna de tabela longa (semana, pat), somando as demais chaves."""
+    if df.empty:
+        return 0.0
+    tabela = df.groupby(["pat", "semana"])[coluna].sum().unstack()
+    tabela = tabela.reindex(index=[1, 2, 3], columns=horas.columns).fillna(0)
+    return media_mensal(tabela.to_numpy(), horas)
 
-    Retorna as parcelas intermediárias com os mesmos nomes do boletim (MWmed).
+
+def calcular_gh_band(ano: int, mes: int) -> dict:
+    """Calcula o GH_band do mês a partir do relato.rv0 e das horas por patamar.
+
+    GH ONS = Σ Ghid + Itaipu 60 Hz (balanço energético); ANDE do eco de Itaipu;
+    PCH das pequenas usinas (linhas *_PCH, sem gd). Retorna as parcelas com os
+    mesmos nomes do boletim (MWmed).
     """
-    sumario = load.ler_sumario(ano, mes)
     horas = load.horas_por_semana(ano, mes)
+    bal = load.ler_relato_balanco(ano, mes)
+    peq = load.ler_relato_pequenas(ano, mes)
     f = fatores_vigentes(ano, mes)
 
-    gh_ons = media_mensal(sumario["gh"], horas)
-    ande = media_mensal(sumario["ande"], horas)
-    pch = {s: media_mensal(v, horas) for s, v in sumario["pch"].items()}
+    gh_ons = media_mensal_df(bal, "ghid", horas) + media_mensal_df(bal, "it60", horas)
+    ande = media_mensal_df(load.ler_relato_ande(ano, mes), "ande", horas)
+    pch_linhas = peq[peq.tipo == "PCH"]
+    pch = {
+        s: media_mensal_df(pch_linhas[pch_linhas.subsistema == s], "mw", horas)
+        for s in load.SUBSISTEMAS.values()
+    }
     pch_total = sum(pch.values())
 
     gh_cg = (
@@ -90,24 +125,10 @@ def gsf_band(gh_band: float, gf_band: float) -> float:
 def cor_bandeira(gsf: float, pld_gatilho: float) -> str:
     """Cor pelo ábaco (sem GFOM), via X = PLD_gatilho × (1 − GSF).
 
-    O PLD gatilho vem do deck da CCEE (cmdeco.rv0), não do CMO do sumario.rv0 do ONS.
+    O PLD gatilho vem do deck da CCEE (cmdeco.rv0), não do CMO do relato/sumário do ONS.
     """
     x = pld_gatilho * max(0.0, 1 - gsf)
     for cor, limite in LIMITES_X.items():
         if x <= limite:
             return cor
     return "Vermelha 2"
-
-
-def serie_gh_band(ano: int, meses=range(1, 13)) -> pd.DataFrame:
-    """Calcula o GH_band e as parcelas para vários meses de um ano.
-
-    Meses sem `sumario.rv0` em data/raw/ons_decomp/ são ignorados.
-    Retorna um DataFrame indexado pelo mês (Period mensal).
-    """
-    linhas = {}
-    for mes in meses:
-        if not load.caminho_sumario(ano, mes).exists():
-            continue
-        linhas[pd.Period(f"{ano}-{mes:02d}", "M")] = calcular_gh_band(ano, mes)
-    return pd.DataFrame.from_dict(linhas, orient="index").rename_axis("mes")

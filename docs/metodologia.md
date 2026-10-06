@@ -321,6 +321,32 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 
 **Origem da nuclear (antes do `relato`):** linhas `ANGRA 1` e `ANGRA 2` do bloco `GERACAO TERMICA` do `sumario.rv0`; o `relato` confirma (1.350 MWmed em out/2026).
 
+### 3.7 Histórico jan/2023–out/2026: fonte única `relato.rv0` e transições
+
+Desde esta etapa, todo o cálculo usa o `relato.rv0` (D022). O `sumario.rv0` só existe em 2026 e não é mais lido no cálculo.
+O `renovaveis.csv` só é usado para separar eólica e solar a partir de out/2025.
+
+**Transições no `relato.rv0`** (tratadas na leitura, `load.ler_relato_*`):
+
+| Período | Eólica e solar centralizadas | MMGD | Balanço energético |
+|---|---|---|---|
+| jan–abr/2023 | Pequenas usinas, linhas `*_EOL` e `*_UFV` (separadas) | Não representada (carga já vinha líquida da MMGD) | Coluna de pequenas usinas chamada `Bacia`; sem `Geol` |
+| mai/2023–set/2025 | Pequenas usinas, linhas `*_EOL` e `*_UFV` | Linhas `*gd` | Idem (`Bacia`/`PQUsi`; sem `Geol`) |
+| out/2025 em diante | `Geol` do balanço (eólica + solar somadas); separação no `renovaveis.csv` (bate com o `Geol` com diferença zero em out–dez/2025) | Linhas `*gd` | `PQUsi` e `Geol` |
+
+A leitura do balanço localiza as colunas pelo cabeçalho de cada tabela. A coluna `GterAT` (térmica antecipada: GNL despachado
+por mérito com antecedência) **não** aparece no bloco por usina e entra na térmica total; com ela o balanço fecha.
+
+**Validação no histórico (46 meses):**
+
+- Balanço: `carga líquida + bombeamento = hidráulica (SIN) + renováveis + térmica + PCH + PCT` fecha com |resíduo| ≤ 0,13 MWmed em todos os meses.
+- GSF_band calculado = publicado em **46/46** meses; GH_band a menos de 1 MWmed em 42 meses.
+- Cor pela regra = cor publicada em **39/39** meses (nos outros 7 boletins a Tabela 17 é imagem, sem texto).
+- Desvios de GH_band > 5 MWmed: **jun/2025 (+256)** = GFOM do mês (265 MWmed): o GH enviado pelo ONS à CCEE já desconta a
+  térmica por segurança energética; **abr/2025 (−444)** sem explicação (Q17); out/2023 (+7) e nov/2024 (+10) pequenos.
+- Fatores de perda da CCEE (Tabela 3) cadastrados em `regra.FATORES` a partir dos boletins: vigências a partir de jan/2023,
+  mar/2023, abr/2024, mar/2025 e mar/2026.
+
 ---
 
 ## 4. Registro de decisões
@@ -349,7 +375,8 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 | D020 | 2026-10-05 | Carga para o forecast: a fonte de projeção tem carga bruta e líquida (sem MMGD) por submercado; usar a **líquida**, com a mesma definição no histórico (demanda bruta do `sumario.rv0` − MMGD das linhas `*gd`) | Evita prever a MMGD separadamente; as duas são equivalentes se a definição for a mesma | Proposta (conferir a equivalência quando a projeção chegar) |
 | D021 | 2026-10-05 | Hipótese de trabalho para a etapa 1: GH_band ≈ f(carga residual − térmica sem nuclear). Carga, renováveis, PCH, PCT e nuclear vêm das projeções de entrada; a térmica sem nuclear é a parcela a modelar com a hidrologia (ENA do ECMWF, EAR) | Carga residual explica o GH_band com r = 0,99 em 2026; a ENA só deve agir via despacho térmico | Proposta (validar com histórico que tenha anos secos, ex.: 2021) |
 | D023 | 2026-10-05 | Na etapa 1, modelar a **térmica total sem nuclear** (não só o mérito) como a parcela que responde à hidrologia | Mérito e inflexível se compensam (GNL antecipado entra como inflexível); o resíduo de GH acompanha o total (r = −0,94) | Proposta |
-| D022 | 2026-10-05 | Arquivos do DECOMP por mês: `relato.rv0` (balanço, térmica inflexível × mérito, bombeamento) + `renovaveis.csv` (eólica e solar separadas). O `sumario.rv0` fica redundante; manter os já baixados e migrar a leitura para o `relato` quando houver todos os meses | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica | Proposta (decisão do usuário sobre manter o `sumario`) |
+| D024 | 2026-10-05 | Caminho do modelo da etapa 1: GH_band = f(carga residual, térmica sem nuclear), com a carga residual vinda das projeções e a **térmica sem nuclear** modelada com a hidrologia — armazenamento (EAR) como variável principal, ENA prevista (ECMWF, % MLT) como secundária — e com os despachos já comprometidos (GNL antecipado) | Histórico de 46 meses: identidade com R² 0,999; sem sazonalidade, a térmica explica o GH (r = −0,87) e responde mais à EAR (−0,70) que à ENA (−0,38) | Proposta |
+| D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
 
@@ -367,6 +394,8 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 - **Q13 — Versões históricas das previsões externas:** para o backtest, precisamos das previsões do ECMWF e da curva Dcide **como estavam na data de cada previsão**. O ECMWF tem hindcasts; a Dcide tem histórico de curvas?
 - ~~**Q15 — Definição de carga:**~~ A projeção tem carga bruta e líquida (sem MMGD) por submercado; ver D020.
 - ~~**Q16 — Eólica e solar centralizadas:**~~ Resolvida: vêm do `renovaveis.csv`, entrada do DECOMP (ver seção 3.4 e D019).
+- **Q17 — Abr/2025:** GH ONS do `relato.rv0` 460 MWmed abaixo do boletim (GSF igual). Investigar (outra revisão do PMO? ajuste do ONS?).
+- **Q18 — Trajetória do armazenamento:** a EAR é a principal variável da térmica, mas para M+2 a M+6 ela também precisa ser projetada (balanço de energia com a ENA do ECMWF? EAR projetada pelo NEWAVE/PMO?).
 - **Q14 — ENA não vira geração hidráulica diretamente:** a hidráulica do DECOMP é, em grande parte, a carga menos eólica, solar e térmica; a ENA entra pelo despacho térmico e pelo armazenamento. A conversão ENA → GH precisa incluir carga e renováveis (ex.: regressão de GH_band em carga líquida, ENA % MLT e EAR).
 - **Q11 — Definição do horizonte:** a cor de M é decidida por volta do dia 25 de M−1. Em 04/10/2026, outubro já é conhecido, então M+1 = novembro. Fixar a data de corte de cada previsão no backtest.
 
@@ -378,8 +407,8 @@ verificação. **Somar só as linhas com `I` subestima a inflexibilidade** (4.93
 | Regra/ábaco vigente e REH 3.306/2024 (PDF), em `docs/referencias/` | ANEEL | Recebido; constantes do ábaco e tabela de GFOM conferidas |
 | Patamares de carga (horário `AAC001` e semanal `AAC002`), em `data/raw/patamar/<ano>/` | CCEE | 2025 e 2026 recebidos e conferidos |
 | Deck do DECOMP da CCEE para o PLD (`cmdeco.rv0`) — etapa 2 | CCEE | A trazer na etapa 2 |
-| Renováveis centralizadas (`renovaveis.csv`), na pasta mensal do DECOMP | ONS | Jan–out/2026 |
-| Relatório completo do DECOMP (`relato.rv0`), na pasta mensal | ONS | Jan–out/2026; balanço fecha em ±0,1 MWmed em todos os meses |
+| Renováveis centralizadas (`renovaveis.csv`), na pasta mensal do DECOMP | ONS | Out/2025–out/2026 (antes, separadas no `relato`) |
+| Relatório completo do DECOMP (`relato.rv0`) e `ena.pdf`, na pasta mensal | ONS | Jan/2023–out/2026 (46 meses); balanço fecha em ±0,13 MWmed em todos |
 | Saídas do DECOMP rv0 por mês (`sumario.rv0` e `ena.pdf`), em `data/raw/ons_decomp/<ano>/<ano>_<mes>/` | ONS | Jan–out/2026 recebidos; `sumario.rv0` conferido contra os boletins; `ena.pdf` ainda não lido |
 | GSF histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Geração hidráulica do MRE e garantia física | CCEE | Pendente |
@@ -437,3 +466,26 @@ Base: `data/processed/base_mensal_2026.parquet` (`features.base_mensal`). Gráfi
      (que entra no mês como GTmin). A separação inflexível × mérito não é uma separação "estrutural × hidrologia".
 5. **ENA em MWmed e GH não fecham balanço:** a ENA usa produtividade de referência e conta cada afluência em toda a cascata, sem descontar vertimento e usos consuntivos; não comparar as duas como "água que entra × água que sai".
 6. **Limite:** 10 meses de um ano sem estresse hídrico. Correlações aqui descrevem 2026, não servem para estimar o modelo.
+
+### 8.2 Etapa 1 — histórico jan/2023–out/2026 (46 meses)
+
+Base: `data/processed/base_mensal.parquet`. Gráficos em `reports/figures/03–07`.
+
+| Modelo para o GH_band | R² | Desvio do resíduo (MWmed) |
+|---|---|---|
+| carga residual | 0,901 | 2.320 |
+| carga residual + térmica sem nuclear | 0,999 | 187 |
+| ENA (MWmed) | 0,813 | 3.196 |
+| ENA (% MLT) | 0,068 | 7.129 |
+| carga residual + ENA (% MLT) | 0,904 | 2.294 |
+| carga residual + ENA (% MLT) + EAR inicial | 0,945 | 1.727 |
+
+1. **GH_band ≈ 1,01 × carga residual − 0,96 × térmica sem nuclear** (quase uma identidade do balanço).
+2. **A ENA não explica o GH_band diretamente:** em níveis, a correlação com a ENA em MWmed (0,90) é sazonalidade; em % MLT, 0,26.
+3. **A hidrologia age pela térmica.** Anomalias por mês do ano (sem sazonalidade): GH × térmica r = −0,87; térmica × EAR
+   inicial r = −0,70; térmica × ENA (% MLT) r = −0,38. O armazenamento pesa mais que a ENA do mês.
+4. **Anos:** 2023 (ENA 98% MLT, EAR 77%): térmica sem nuclear 2,3 mil MWmed, GSF médio 0,90. 2024 (ENA 71%, EAR 61%):
+   pico de 10,7 mil em out/2024 (8,0 mil por mérito; ENA 56%, EAR 50%) → vermelha 2. 2025 (ENA 77%, EAR 62%): 7–10 mil
+   no 2º semestre → vermelha 1 e 2. 2026 (ENA 94%, EAR 63%): 3,4–6,5 mil.
+5. **Ordem de grandeza:** 5 mil MWmed a mais de térmica ≈ −0,1 no GSF — o suficiente para mudar a cor em um ou dois patamares.
+6. Ver D024 (caminho do modelo) e Q18 (projeção do armazenamento).

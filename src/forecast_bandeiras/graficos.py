@@ -58,6 +58,8 @@ def _milhar(ax, eixo: str = "y") -> None:
 
 
 def _rotulos_mes(indice: pd.DatetimeIndex) -> list[str]:
+    if indice.year.nunique() > 1:
+        return [f"{MESES[d.month - 1]}/{d.year % 100:02d}" for d in indice]
     return [MESES[d.month - 1] for d in indice]
 
 
@@ -162,7 +164,13 @@ def _paineis_dispersao(
         ax.scatter(
             x, y, s=60, color=SERIES[0], edgecolor=SUPERFICIE, linewidth=2, zorder=3
         )
-        for xi, yi, m in zip(x, y, _rotulos_mes(base.index)):
+        rotulos = _rotulos_mes(base.index)
+        if len(base) > 12:  # muitos pontos: rotula só os 3 maiores e 3 menores de y
+            ordem = y.rank()
+            rotulos = [
+                r if (o <= 3 or o > len(y) - 3) else "" for r, o in zip(rotulos, ordem)
+            ]
+        for xi, yi, m in zip(x, y, rotulos):
             ax.annotate(
                 m,
                 (xi, yi),
@@ -198,7 +206,7 @@ def dispersoes_gh(base: pd.DataFrame, nome: str = "03_gh_vs_variaveis.png") -> P
         base,
         base.gh_band,
         paineis,
-        "GH_band contra as variáveis candidatas — SIN, 2026 (10 meses)",
+        f"GH_band contra as variáveis candidatas — SIN, {len(base)} meses",
         "GH_band (MWmed)",
         nome,
     )
@@ -226,7 +234,7 @@ def gh_vs_ena(base: pd.DataFrame, nome: str = "04_gh_vs_ena.png") -> Path:
         markersize=5,
         label="GH_band",
     )
-    for xi, v, mlt in zip(x, base.ena_sin, base.ena_mlt_sin):
+    for xi, v, mlt in zip(x, base.ena_sin, base.ena_mlt_sin) if len(base) <= 12 else []:
         ax.annotate(
             f"{mlt:.0f}% MLT",
             (xi, v),
@@ -238,7 +246,8 @@ def gh_vs_ena(base: pd.DataFrame, nome: str = "04_gh_vs_ena.png") -> Path:
         )
     _estilo(
         ax,
-        "ENA prevista e GH_band do SIN (MWmed); rótulos: ENA em % da MLT",
+        "ENA prevista e GH_band do SIN (MWmed)"
+        + ("; rótulos: ENA em % da MLT" if len(base) <= 12 else ""),
     )
     _milhar(ax)
     ax.set_ylim(0, base.ena_sin.max() * 1.15)
@@ -267,7 +276,113 @@ def residuo_vs_ena(
         base,
         residuo,
         paineis,
-        "O que sobra do GH_band depois da carga residual não acompanha a ENA — SIN, 2026",
+        f"Resíduo de GH_band ~ carga residual contra ENA e EAR — SIN, {len(base)} meses",
         "Resíduo de GH_band ~ carga residual (MWmed)",
         nome,
     )
+
+
+def serie_historica(base: pd.DataFrame, nome: str = "06_serie_historica.png") -> Path:
+    """Carga residual, hidráulica para o SIN e térmica sem nuclear mês a mês (MWmed)."""
+    fig, ax = plt.subplots(figsize=(12, 4.8), facecolor=SUPERFICIE)
+    series = {
+        "Carga residual": base.carga_residual,
+        "Hidráulica para o SIN": base.gh_sin,
+        "Térmica sem nuclear": base.termica_sem_nuclear,
+    }
+    for (rotulo, valores), cor in zip(series.items(), SERIES):
+        ax.plot(
+            base.index,
+            valores,
+            color=cor,
+            linewidth=2,
+            marker="o",
+            markersize=3.5,
+            label=rotulo,
+        )
+    _estilo(
+        ax,
+        f"Hidráulica = carga residual − térmica: {base.index[0]:%m/%Y} a {base.index[-1]:%m/%Y} (MWmed)",
+    )
+    _milhar(ax)
+    ax.set_ylim(0, None)
+    ax.legend(
+        frameon=False,
+        fontsize=9,
+        labelcolor=TEXTO_SEC,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.08),
+        ncol=3,
+    )
+    return _salvar(fig, nome)
+
+
+def anomalias(base: pd.DataFrame, nome: str = "07_anomalias.png") -> Path:
+    """Sem a sazonalidade (desvio da média do mesmo mês nos outros anos): GH × térmica × hidrologia."""
+    cols = ["gh_band", "termica_sem_nuclear", "ear_ini_sin", "ena_mlt_sin"]
+    an = base[cols] - base[cols].groupby(base.index.month).transform("mean")
+    paineis = [
+        (
+            "termica_sem_nuclear",
+            "gh_band",
+            "Anomalia da térmica sem nuclear (MWmed)",
+            "Anomalia do GH_band (MWmed)",
+            True,
+        ),
+        (
+            "ear_ini_sin",
+            "termica_sem_nuclear",
+            "Anomalia da EAR inicial (p.p.)",
+            "Anomalia da térmica sem nuclear (MWmed)",
+            False,
+        ),
+        (
+            "ena_mlt_sin",
+            "termica_sem_nuclear",
+            "Anomalia da ENA (p.p. da MLT)",
+            "Anomalia da térmica sem nuclear (MWmed)",
+            False,
+        ),
+    ]
+    fig, eixos = plt.subplots(1, 3, figsize=(14, 4.4), facecolor=SUPERFICIE)
+    rotulos = _rotulos_mes(base.index)
+    for ax, (cx, cy, rx, ry, milhar_x) in zip(eixos, paineis):
+        ax.scatter(
+            an[cx],
+            an[cy],
+            s=45,
+            color=SERIES[0],
+            edgecolor=SUPERFICIE,
+            linewidth=1.5,
+            zorder=3,
+        )
+        ordem = an[cy].rank()
+        for xi, yi, r, o in zip(an[cx], an[cy], rotulos, ordem):
+            if o <= 2 or o > len(an) - 2:
+                ax.annotate(
+                    r,
+                    (xi, yi),
+                    xytext=(5, 4),
+                    textcoords="offset points",
+                    fontsize=8,
+                    color=TEXTO_SEC,
+                )
+        _estilo(ax, f"r = {an[cx].corr(an[cy]):.2f}")
+        ax.set_xlabel(rx, color=TEXTO_SEC, fontsize=9)
+        ax.set_ylabel(ry, color=TEXTO_SEC, fontsize=9)
+        ax.grid(axis="x", color=GRADE, linewidth=0.8)
+        ax.axhline(0, color=TEXTO_SEC, linewidth=0.8)
+        ax.axvline(0, color=TEXTO_SEC, linewidth=0.8)
+        _milhar(ax)
+        if milhar_x:
+            _milhar(ax, "x")
+    fig.suptitle(
+        "Sem a sazonalidade, a hidrologia aparece pela térmica — anomalias por mês do ano",
+        x=0.01,
+        ha="left",
+        color=TEXTO,
+        fontsize=12,
+        fontweight="bold",
+    )
+    fig.tight_layout()
+    return _salvar(fig, nome)
