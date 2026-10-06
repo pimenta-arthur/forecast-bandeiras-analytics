@@ -378,6 +378,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D023 | 2026-10-05 | Na etapa 1, modelar a **térmica total sem nuclear** (não só o mérito) como a parcela que responde à hidrologia | Mérito e inflexível se compensam (GNL antecipado entra como inflexível); o resíduo de GH acompanha o total (r = −0,94) | Proposta |
 | D024 | 2026-10-05 | Caminho do modelo da etapa 1: GH_band = f(carga residual, térmica sem nuclear), com a carga residual vinda das projeções e a **térmica sem nuclear** modelada com a hidrologia — armazenamento (EAR) como variável principal, ENA prevista (ECMWF, % MLT) como secundária — e com os despachos já comprometidos (GNL antecipado) | Histórico de 46 meses: identidade com R² 0,999; sem sazonalidade, a térmica explica o GH (r = −0,87) e responde mais à EAR (−0,70) que à ENA (−0,38) | Proposta |
 | D025 | 2026-10-06 | **Saída principal: probabilidade de cada cor por mês** (ex.: "ago: 70% amarela, 25% vermelha 1, 5% verde"), calculada sobre os cenários (ENA do ECMWF × cenários do NEWAVE, com GSF e preço de cada cenário). Os cenários LI / esperado / LS do GSF e do preço continuam como apoio | Incorpora juntas a incerteza do GSF e do preço; mais útil para o usuário do que uma cor única | Decidido |
+| D026 | 2026-10-06 | Configuração de trabalho do teste do NEWAVE: **GSF** com os 10 cenários de ENA do SIN mais próxima no mês; **preço** com os 25 cenários de trajetória de ENA do SIN mais próxima (mais peso nos meses recentes), PLD de cada cenário pela fórmula do gatilho (4 submercados). **Sem** termo de armazenamento futuro: na data da previsão só se conhece o armazenamento atual (já embutido no deck); o armazenamento futuro entra implicitamente pela trajetória de ENA de cada série | Melhor configuração realizável no estresse (seção 8.4); a seção 8.5 usa o armazenamento futuro real (gabarito) e é limite superior | Proposta (revalidar com mais decks e com o ECMWF) |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -399,6 +400,8 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 - **Q17 — Abr/2025:** GH ONS do `relato.rv0` 460 MWmed abaixo do boletim (GSF igual). Investigar (outra revisão do PMO? ajuste do ONS?).
 - **Q18 — Trajetória do armazenamento:** a EAR é a principal variável da térmica, mas para M+2 a M+6 ela também precisa ser projetada (balanço de energia com a ENA do ECMWF? EAR projetada pelo NEWAVE/PMO?).
 - **Q19 — Viés do NEWAVE no 2º semestre de 2026:** de onde vem (carga, renováveis, térmica, vertimento)? Precisa da térmica, do armazenamento e do vertimento por série e das entradas do deck (carga e renováveis por mês).
+- **Q20 — Viés do preço na transição úmido → seco:** o custo marginal do NEWAVE fica muito abaixo do PLD gatilho em fev–mai. Causa (armazenamento inicial baixo? CVaR? DECOMP × NEWAVE)? O casamento pelo armazenamento (8.5) reduz o viés, mas fev–mar seguem abaixo do oficial; testar correção de viés por mês e a curva Dcide.
+- **Q21 — Viés do armazenamento das séries do NEWAVE:** o armazenamento real do SE ficou abaixo de ~90% das séries do deck de jan/2026. Se for sistemático (com mais decks), estimar e corrigir na escolha das séries do preço.
 - **Q14 — ENA não vira geração hidráulica diretamente:** a hidráulica do DECOMP é, em grande parte, a carga menos eólica, solar e térmica; a ENA entra pelo despacho térmico e pelo armazenamento. A conversão ENA → GH precisa incluir carga e renováveis (ex.: regressão de GH_band em carga líquida, ENA % MLT e EAR).
 - **Q11 — Definição do horizonte:** a cor de M é decidida por volta do dia 25 de M−1. Em 04/10/2026, outubro já é conhecido, então M+1 = novembro. Fixar a data de corte de cada previsão no backtest.
 
@@ -422,11 +425,15 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | GFOM (despacho fora da ordem de mérito) | ONS/CCEE | Pendente |
 | PLD gatilho histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Memória de cálculo mensal da bandeira (PDF), em `data/raw/ccee_calculo_bandeira/<ano>/` | CCEE | 2026: jan–out completos; 2019–2025 a trazer (Q12) |
-| Saídas do NEWAVE por série (`nwlistop`: `ghtot*`, `eafb*`, `cmarg*`), em `data/raw/ons_newave/<ano>/<ano>_<mes>/` | CCEE (deck de preços) | Jan e fev/2026 |
+| Saídas do NEWAVE por série (`nwlistop`: `ghtot*`, `eafb*`, `cmarg001–004`), em `data/raw/ons_newave/<ano>/<ano>_<mes>/` | CCEE (deck de preços) | Jan e fev/2026 |
 | Previsão sazonal de ENA (% MLT) | ECMWF SEAS5 | A verificar (incluindo hindcasts) |
 | Curva forward de PLD | Dcide | A verificar (histórico de curvas) |
 
 ## 7. Próximos passos
+
+> **Princípio para o preço (etapa 2):** melhorar o sinal de preço usando **só o que estará disponível na data da previsão**:
+> as 2.000 séries do NEWAVE do deck mais recente e a ENA prevista (ECMWF). O armazenamento futuro real não é insumo; testes
+> com ele (seção 8.5) servem só como limite superior e diagnóstico.
 
 **Etapa 1 — dados para a análise exploratória da geração hidráulica** (mensal, 2019–2026, SIN e por subsistema quando houver):
 
@@ -512,3 +519,59 @@ indica que são do **deck de preços da CCEE**, não do PMO do ONS.
   (jun: erro de 3,6 mil → 1,7 mil; abr: 0,9 mil → 0,2 mil), mas não o 2º (ago–out: ~−5 mil). O erro do 2º semestre não é
   hidrológico: carga, renováveis, térmica ou representação diferente entre o NEWAVE de jan/fev e o DECOMP de cada mês.
 - **Limite:** 2 decks de um único ano; o 2º semestre de 2026 foi atípico (ENA do Sul em 150–200% da MLT).
+
+### 8.4 Estresse do teste do NEWAVE com "ENA perfeita" (decks de jan e fev/2026)
+
+Todos os testes usam a ENA realizada (oráculo), 2 decks e escolhas feitas na própria amostra: os números são um teto.
+
+**GSF — escolha dos cenários.** Trajetória única (1 cenário): erro médio do GSF 0,070 (jan) e 0,050 (fev). Escolhendo
+**mês a mês os 10 cenários com ENA do SIN mais próxima da do mês**: 0,033 (jan) e 0,038 (fev); cor certa com o PLD oficial
+em 19/19 meses. A ENA do SIN funciona melhor que por subsistema (dimensões demais para 2.000 séries); com 5–10 cenários
+o erro estabiliza. Nos mesmos meses (fev–out) os dois decks erram igual (0,037 × 0,038), com o mesmo viés sazonal:
+superestima em fev–mai (+0,04 a +0,07) e subestima em ago–set (−0,03 a −0,06). Referência ingênua (média do mesmo mês
+em 2023–2025): ≈ 0,047.
+
+**Preço — a trajetória importa.** Escolhendo os cenários do preço pela **trajetória de ENA do SIN até o mês, com mais peso
+nos meses recentes** (meia-vida de 2 meses, 25 cenários), o erro do PLD nos meses com GSF < 0,9 cai de R$ 44 (só o mês)
+para R$ 32, e a cor certa sobe de 15 para 16–17 em 19. ENA acumulada (do SIN ou por subsistema) dá resultado parecido
+(substituta do armazenamento); trajetória por subsistema mês a mês piora muito.
+
+**Preço — 4 submercados.** O "PLD gatilho" de cada cenário passou a seguir a fórmula oficial (custo marginal limitado ao
+PLD mín/máx por patamar e submercado, média por horas de patamar, ponderação pela carga do `relato`): resultado
+praticamente igual ao do Sudeste sozinho (diferença < R$ 2; mesmas cores), porque nos cenários do NEWAVE os submercados
+quase sempre estão acoplados (NE/N descolam > R$ 20 do SE em 3–7% das séries em abr–mai).
+
+**Descolamento real entre submercados (boletins 2023–2026):** a média ponderada pela carga reproduz o PLD gatilho com
+diferença zero. Em 38 de 46 meses os 4 submercados tiveram o mesmo PLD. Descolamento relevante só em mar–mai (NE/N no piso
+ou bem abaixo do SE): mar/25 (SE − gatilho = +68), abr/25 (+51), mai/25 (+26), mar/26 (+46), mai/26 (+33). Nenhuma cor
+mudaria nesta amostra (GSF ≥ 0,94 ou X na mesma faixa), mas maio fica perto da fronteira.
+
+**Principal problema do preço: o nível na transição úmido → seco.** Em fev–mai/2026 o custo marginal do SE nos cenários
+escolhidos ficou em R$ 113–190 contra R$ 262–473 do PLD oficial (viés de −R$ 90 a −360). De jun a out o nível é bom.
+Na maior parte desses meses o GSF ≥ 0,94 e a cor não muda; em maio (GSF 0,80) muda.
+
+### 8.5 Preço com armazenamento por cenário (`earmfp*`, decks de jan e fev/2026)
+
+> ⚠️ **Limite superior, não realizável:** este teste usa o armazenamento real do início de cada mês futuro, que não é
+> conhecido na data da previsão. Na prática o armazenamento entra (1) pela condição inicial do deck mais recente, (2)
+> implicitamente pela trajetória de ENA de cada série (o NEWAVE calcula o armazenamento a partir dela), (3) por correção
+> de viés aprendida no histórico (ex.: armazenamento do SE sistematicamente abaixo do previsto pelas séries) e (4) pelas
+> revisões semanais do DECOMP, se a previsão for feita no meio do mês. A diferença R$ 32 → R$ 22 mede quanto vale
+> melhorar a trajetória.
+
+Armazenamento final por série (% EARmax, por submercado e SIN). Para o mês *m*, compara-se o armazenamento do fim de
+*m−1* de cada série com o armazenamento inicial real do PMO de *m* (`relato.rv0`).
+
+- **O armazenamento real ficou na parte baixa da distribuição:** no deck de jan, o do SIN abaixo de 70–85% das séries e o
+  do **SE abaixo de ~90%**. O sistema chegou a cada mês com menos água no SE do que a maioria dos cenários previa.
+- **Só o armazenamento erra para cima** (viés de +R$ 100 a +150 no período seco): séries com reservatório baixo
+  costumam ser secas, mas em 2026 o 2º semestre teve ENA alta (Sul muito úmido).
+- **Melhor combinação** (estável nos vizinhos): distância = 0,25 × armazenamento por submercado (p.p./5) + ENA do SIN no
+  mês (erro relativo/10%) + trajetória de ENA (mais peso nos meses recentes), 25 séries. Contra a trajetória sozinha:
+  erro médio do PLD em todos os meses de R$ 80 → **R$ 58**; nos meses com GSF < 0,9, de R$ 32 → **R$ 22**.
+- **Maio passa a acertar nos dois decks** (preço de R$ 133/182 → 224/264, contra 238 oficial). A transição úmido → seco
+  melhora (mar: 110/174 → 179/243 contra 427; abr: 154/184 → 228/238 contra 258), ainda abaixo do oficial em fev–mar.
+- **Novos erros em outubro** (verde → amarela nos dois decks): X ≈ 27,5, exatamente no limite verde/amarela (27,48),
+  com GSF levemente subestimado (0,78–0,79 contra 0,82) e preço acima (R$ 125–131 contra 90). Junho do deck de fev
+  continua vermelha 1 (preço R$ 309 contra 223). Cor certa: 16/19, a mesma contagem, mas com erros em meses de fronteira.
+- Cuidado: grade de pesos escolhida na própria amostra (19 meses-previsão, oráculo de ENA e armazenamento).
