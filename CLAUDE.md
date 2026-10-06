@@ -1,7 +1,7 @@
 # forecast-bandeiras
 
 ## Objetivo do projeto
-Prever a bandeira tarifária mensal (M+1 até no mínimo M+6), em cenários LI / esperado / LS.
+Prever a bandeira tarifária mensal (M+1 até no mínimo M+6). **Saída principal: probabilidade de cada cor por mês** (ex.: "ago: 70% amarela, 25% vermelha 1, 5% verde"), calculada sobre os cenários; GSF e preço em cenários LI / esperado / LS como apoio (D025).
 
 - **Variável alvo:** bandeira tarifária do mês. A abordagem é prever os insumos da regra (GSF, depois PLD) e aplicar o ábaco da ANEEL.
 - **Variáveis de entrada:** em definição (ENA, carga, geração hidráulica, garantia física, PLD, GFOM...).

@@ -12,6 +12,7 @@ Prever a bandeira tarifária mensal (verde, amarela, vermelha P1, vermelha P2) p
 futuros, de M+1 até **no mínimo M+6**. O horizonte final depende do desempenho no backtest.
 
 A saída é organizada em cenários: **limite inferior (LI)**, **esperado** e **limite superior (LS)**.
+A saída principal é a **probabilidade de cada cor** em cada mês (D025).
 
 ## 2. Abordagem geral
 
@@ -376,6 +377,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D021 | 2026-10-05 | Hipótese de trabalho para a etapa 1: GH_band ≈ f(carga residual − térmica sem nuclear). Carga, renováveis, PCH, PCT e nuclear vêm das projeções de entrada; a térmica sem nuclear é a parcela a modelar com a hidrologia (ENA do ECMWF, EAR) | Carga residual explica o GH_band com r = 0,99 em 2026; a ENA só deve agir via despacho térmico | Proposta (validar com histórico que tenha anos secos, ex.: 2021) |
 | D023 | 2026-10-05 | Na etapa 1, modelar a **térmica total sem nuclear** (não só o mérito) como a parcela que responde à hidrologia | Mérito e inflexível se compensam (GNL antecipado entra como inflexível); o resíduo de GH acompanha o total (r = −0,94) | Proposta |
 | D024 | 2026-10-05 | Caminho do modelo da etapa 1: GH_band = f(carga residual, térmica sem nuclear), com a carga residual vinda das projeções e a **térmica sem nuclear** modelada com a hidrologia — armazenamento (EAR) como variável principal, ENA prevista (ECMWF, % MLT) como secundária — e com os despachos já comprometidos (GNL antecipado) | Histórico de 46 meses: identidade com R² 0,999; sem sazonalidade, a térmica explica o GH (r = −0,87) e responde mais à EAR (−0,70) que à ENA (−0,38) | Proposta |
+| D025 | 2026-10-06 | **Saída principal: probabilidade de cada cor por mês** (ex.: "ago: 70% amarela, 25% vermelha 1, 5% verde"), calculada sobre os cenários (ENA do ECMWF × cenários do NEWAVE, com GSF e preço de cada cenário). Os cenários LI / esperado / LS do GSF e do preço continuam como apoio | Incorpora juntas a incerteza do GSF e do preço; mais útil para o usuário do que uma cor única | Decidido |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -396,6 +398,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 - ~~**Q16 — Eólica e solar centralizadas:**~~ Resolvida: vêm do `renovaveis.csv`, entrada do DECOMP (ver seção 3.4 e D019).
 - **Q17 — Abr/2025:** GH ONS do `relato.rv0` 460 MWmed abaixo do boletim (GSF igual). Investigar (outra revisão do PMO? ajuste do ONS?).
 - **Q18 — Trajetória do armazenamento:** a EAR é a principal variável da térmica, mas para M+2 a M+6 ela também precisa ser projetada (balanço de energia com a ENA do ECMWF? EAR projetada pelo NEWAVE/PMO?).
+- **Q19 — Viés do NEWAVE no 2º semestre de 2026:** de onde vem (carga, renováveis, térmica, vertimento)? Precisa da térmica, do armazenamento e do vertimento por série e das entradas do deck (carga e renováveis por mês).
 - **Q14 — ENA não vira geração hidráulica diretamente:** a hidráulica do DECOMP é, em grande parte, a carga menos eólica, solar e térmica; a ENA entra pelo despacho térmico e pelo armazenamento. A conversão ENA → GH precisa incluir carga e renováveis (ex.: regressão de GH_band em carga líquida, ENA % MLT e EAR).
 - **Q11 — Definição do horizonte:** a cor de M é decidida por volta do dia 25 de M−1. Em 04/10/2026, outubro já é conhecido, então M+1 = novembro. Fixar a data de corte de cada previsão no backtest.
 
@@ -419,6 +422,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | GFOM (despacho fora da ordem de mérito) | ONS/CCEE | Pendente |
 | PLD gatilho histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Memória de cálculo mensal da bandeira (PDF), em `data/raw/ccee_calculo_bandeira/<ano>/` | CCEE | 2026: jan–out completos; 2019–2025 a trazer (Q12) |
+| Saídas do NEWAVE por série (`nwlistop`: `ghtot*`, `eafb*`, `cmarg*`), em `data/raw/ons_newave/<ano>/<ano>_<mes>/` | CCEE (deck de preços) | Jan e fev/2026 |
 | Previsão sazonal de ENA (% MLT) | ECMWF SEAS5 | A verificar (incluindo hindcasts) |
 | Curva forward de PLD | Dcide | A verificar (histórico de curvas) |
 
@@ -489,3 +493,22 @@ Base: `data/processed/base_mensal.parquet`. Gráficos em `reports/figures/03–0
    no 2º semestre → vermelha 1 e 2. 2026 (ENA 94%, EAR 63%): 3,4–6,5 mil.
 5. **Ordem de grandeza:** 5 mil MWmed a mais de térmica ≈ −0,1 no GSF — o suficiente para mudar a cor em um ou dois patamares.
 6. Ver D024 (caminho do modelo) e Q18 (projeção do armazenamento).
+
+### 8.3 Primeiro teste com o NEWAVE (decks de jan e fev/2026)
+
+Arquivos em `data/raw/ons_newave/2026/2026_01` e `2026_02` (saídas do `nwlistop`, 2.000 séries × 5 anos, 2026–2030):
+`ghtotsin` e `ghtotm001–004` (geração hidráulica total, por patamar, MWmês), `eafbsin` e `eafbm001–004` (energia afluente
+bruta), `cmarg001` e `cmarg001-med` (custo marginal do SE). Os arquivos são por **ano civil** (colunas jan–dez): no deck de
+fevereiro, janeiro vem zerado porque é anterior ao início do estudo. O cabeçalho ("PLD - JANEIRO - 2026 - Niveis para 27/12")
+indica que são do **deck de preços da CCEE**, não do PMO do ONS.
+
+- **Mesmas grandezas do nosso alvo:** no mês 1 do deck de jan, a hidráulica do SIN (média das séries) é 53.060 contra 53.104
+  MWmed da GH ONS do DECOMP; a energia afluente bruta é 81.906 contra 81.119 MWmed da ENA do `ena.pdf`.
+- **Erro da média das 2.000 séries (deck de jan, jan–out/2026):** 2.841 MWmed em média (≈ 0,054 de GSF). Referência
+  ingênua (média do mesmo mês em 2023–2025): 2.479 MWmed (≈ 0,047). Nesta amostra o NEWAVE puro **não** superou a referência.
+- **Padrão do erro:** superestima de fev a jun (+1 a +4 mil) e subestima de jul a out (−2 a −5 mil); de ago a out, o valor
+  do DECOMP ficou **acima de todas as 2.000 séries**.
+- **Teste com a ENA realizada (oráculo, 50 séries de ENA mais parecida por subsistema):** melhora o 1º semestre
+  (jun: erro de 3,6 mil → 1,7 mil; abr: 0,9 mil → 0,2 mil), mas não o 2º (ago–out: ~−5 mil). O erro do 2º semestre não é
+  hidrológico: carga, renováveis, térmica ou representação diferente entre o NEWAVE de jan/fev e o DECOMP de cada mês.
+- **Limite:** 2 decks de um único ano; o 2º semestre de 2026 foi atípico (ENA do Sul em 150–200% da MLT).
