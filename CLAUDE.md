@@ -38,3 +38,11 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 - Começar sempre por um baseline simples antes de modelos mais complexos.
 - Se os dados forem temporais, separar treino/teste por data (`TimeSeriesSplit`), **nunca aleatoriamente**.
 - Cuidado com vazamento de dados (data leakage): nenhuma feature pode usar informação indisponível no momento da previsão; ajustar transformações (escalas, imputações) apenas no treino.
+
+### ⚠️ Regra do backtest: só o que existia na data da previsão
+Todo backtest simula alguém **sentado na data do deck** (ex.: início de jan/2026 com o deck de jan) prevendo os meses seguintes. **Qualquer número usado numa previsão tem que estar disponível nessa data.** Antes de rodar ou reportar um resultado, conferir item a item:
+- **Erros, desvios, viés, calibração (σ, correções, pesos):** só com previsões cujo mês-alvo **já tinha terminado** na data do deck. Deck de jan/2026 → erros até dez/2025; deck de fev/2026 → até jan/2026. Nunca usar erros de meses do mesmo ano posteriores à data, nem "deixar só o próprio mês de fora" (leave-one-out não basta). Sem histórico suficiente, o método fica suspenso, não se improvisa com dados do futuro.
+- **Insumos do mês-alvo** (ANDE, PCH, carga/pesos de submercado, GF_band, PLD mín/máx): vêm do deck ou de publicações da data, não do PMO/boletim do próprio mês-alvo.
+- **Escolha de parâmetros** (k, meia-vida, pesos, critério de seleção): escolhidos em um período e avaliados em outro; resultado escolhido e avaliado na mesma amostra é "dentro da amostra" e deve ser rotulado assim.
+- **Oráculos** (ex.: ENA real no lugar da prevista): permitidos só para estudar limites, sempre identificados como "oráculo / limite superior", nunca como desempenho esperado.
+- Ao apresentar qualquer resultado de backtest, dizer explicitamente o que é fora da amostra, o que é dentro da amostra e o que é oráculo.
