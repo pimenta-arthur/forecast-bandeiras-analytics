@@ -21,6 +21,7 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 
 ## Estrutura
 - `data/raw/` — dados originais, **somente leitura** (nunca modificar ou sobrescrever).
+  Os dados brutos são versionados no **git normal** (sem Git LFS): são arquivos de texto que o git compacta ~5× (um deck do NEWAVE de 28 MB vira ~5 MB). Reavaliar só se o repositório for para um remoto e o `.git` passar de ~1 GB.
 - `data/processed/` — dados limpos, em parquet.
 - `notebooks/` — `01_eda`, `02_features`, `03_modelagem`.
 - `src/forecast_bandeiras/` — `load.py` (leitura de `sumario.rv0` e patamares), `regra.py` (GH_band, GSF e cor pelo ábaco), `features.py` (balanço e base mensal), `graficos.py` (figuras da EDA), `newave.py` (séries do NEWAVE, PLD gatilho por série e escolha de séries pela ENA), `models.py`. Fonte do DECOMP: `relato.rv0` (tudo) e `renovaveis.csv` (só para separar eólica e solar a partir de out/2025); `sumario.rv0` não é mais usado. Base histórica: `data/processed/base_mensal.parquet` (jan/2023–out/2026).
