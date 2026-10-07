@@ -64,8 +64,8 @@ def _rotulos_mes(indice: pd.DatetimeIndex) -> list[str]:
 
 
 def _salvar(fig, nome: str) -> Path:
-    FIGURAS.mkdir(parents=True, exist_ok=True)
     caminho = FIGURAS / nome
+    caminho.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(caminho, dpi=150, bbox_inches="tight", facecolor=SUPERFICIE)
     plt.close(fig)
     return caminho
@@ -384,5 +384,276 @@ def anomalias(base: pd.DataFrame, nome: str = "07_anomalias.png") -> Path:
         fontsize=12,
         fontweight="bold",
     )
+    fig.tight_layout()
+    return _salvar(fig, nome)
+
+
+CINZA_FAIXA = "#e4e3df"
+CINZA_MEDIANA = "#9a988f"
+# Cores das bandeiras (convenção do setor), sempre acompanhadas do nome escrito.
+CORES_BANDEIRA = {
+    "Verde": "#2e9e5b",
+    "Amarela": "#f2c230",
+    "Vermelha 1": "#e35d4f",
+    "Vermelha 2": "#9e1b1b",
+}
+
+
+def _br(valor: float, casas: int = 1) -> str:
+    """Número no formato brasileiro (1.234,5)."""
+    texto = f"{valor:,.{casas}f}"
+    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _faixa_e_series(ax, meses, dados, idx, rotulo_escolhidas, media=None):
+    """Faixa P10–P90 e mediana de todas as séries, séries escolhidas finas e a média delas."""
+    ax.fill_between(
+        meses,
+        dados.quantile(0.1),
+        dados.quantile(0.9),
+        color=CINZA_FAIXA,
+        label="2.000 séries (P10–P90)",
+        zorder=1,
+    )
+    ax.plot(
+        meses,
+        dados.median(),
+        color=CINZA_MEDIANA,
+        linewidth=1,
+        linestyle="--",
+        label="Mediana das 2.000 séries",
+        zorder=2,
+    )
+    if idx is not None:
+        for i, serie in enumerate(idx):
+            ax.plot(
+                meses,
+                dados.loc[serie],
+                color=SERIES[0],
+                linewidth=0.8,
+                alpha=0.25,
+                label="Séries escolhidas" if i == 0 else None,
+                zorder=3,
+            )
+        media = dados.loc[idx].mean()
+    ax.plot(
+        meses, media, color=SERIES[0], linewidth=2.2, label=rotulo_escolhidas, zorder=4
+    )
+    return media
+
+
+def trajetorias_deck(
+    ena_sin: pd.DataFrame,
+    gsf: pd.DataFrame,
+    pld: pd.DataFrame,
+    real: pd.DataFrame,
+    escolhidas_preco: dict,
+    escolhidas_gsf: dict,
+    dcide: pd.Series,
+    titulo: str,
+    nome: str,
+    rotulo_gsf: str = "Estimativa (10 séries da ENA do mês)",
+) -> Path:
+    """ENA, GSF e PLD gatilho do início do deck até cada mês-alvo (uma coluna por alvo).
+
+    - ENA e PLD: séries escolhidas pela trajetória de ENA até o alvo (método do preço).
+    - GSF: em cada mês, média das séries escolhidas pela ENA daquele mês (método do GSF).
+    - PLD: inclui a curva forward da Dcide (`dcide`, indexada pelo número do mês).
+    `real` tem colunas ena_sin, gsf_band_boletim e pld_gatilho_boletim, indexada pelo mês.
+    """
+    alvos = list(escolhidas_preco)
+    fig, eixos = plt.subplots(
+        3,
+        len(alvos),
+        figsize=(4.9 * len(alvos), 11.2),
+        facecolor=SUPERFICIE,
+        sharey="row",
+        squeeze=False,
+    )
+    inicio = min(pld.columns)
+    for c, alvo in enumerate(alvos):
+        meses = [m for m in range(inicio, alvo + 1) if m in real.index]
+        x_rot = [MESES[m - 1] for m in meses]
+
+        ax = eixos[0, c]
+        media = _faixa_e_series(
+            ax, meses, ena_sin[meses], escolhidas_preco[alvo], "Média das escolhidas"
+        )
+        ax.plot(
+            meses,
+            real.loc[meses, "ena_sin"],
+            color=TEXTO,
+            linewidth=2.2,
+            marker="o",
+            markersize=4,
+            label="Real",
+            zorder=5,
+        )
+        v = real.loc[alvo, "ena_sin"]
+        _estilo(
+            ax,
+            f"Alvo: {MESES[alvo - 1]}\nENA real {_br(v / 1000)} mil · escolhidas "
+            f"{_br(media.loc[alvo] / 1000)} mil",
+        )
+        _milhar(ax)
+
+        ax = eixos[1, c]
+        est = pd.Series({m: gsf.loc[escolhidas_gsf[m], m].mean() for m in meses})
+        _faixa_e_series(
+            ax,
+            meses,
+            gsf[meses],
+            None,
+            rotulo_gsf,
+            media=est,
+        )
+        ax.plot(
+            meses,
+            real.loc[meses, "gsf_band_boletim"],
+            color=TEXTO,
+            linewidth=2.2,
+            marker="o",
+            markersize=4,
+            label=None,
+            zorder=5,
+        )
+        erro = (est.round(2) - real.loc[meses, "gsf_band_boletim"]).abs().mean()
+        _estilo(
+            ax,
+            f"GSF real {_br(real.loc[alvo, 'gsf_band_boletim'], 2)} · estimado "
+            f"{_br(est.loc[alvo], 2)} · erro médio {_br(erro, 3)}",
+        )
+
+        ax = eixos[2, c]
+        media = _faixa_e_series(
+            ax, meses, pld[meses], escolhidas_preco[alvo], "Média das escolhidas"
+        )
+        ax.plot(
+            meses,
+            real.loc[meses, "pld_gatilho_boletim"],
+            color=TEXTO,
+            linewidth=2.2,
+            marker="o",
+            markersize=4,
+            zorder=5,
+        )
+        titulo_pld = (
+            f"PLD real R\\$ {_br(real.loc[alvo, 'pld_gatilho_boletim'], 0)} · séries "
+            f"R\\$ {_br(media.loc[alvo], 0)}"
+        )
+        if dcide is not None and not dcide.empty:  # nem todo deck tem curva Dcide
+            dc = dcide.reindex(meses)
+            ax.plot(
+                meses,
+                dc,
+                color=SERIES[1],
+                linewidth=2.2,
+                marker="s",
+                markersize=4,
+                label="Dcide (curva forward, PLD SE)",
+                zorder=4,
+            )
+            titulo_pld += f" · Dcide R\\$ {_br(dc.loc[alvo], 0)}"
+        _estilo(ax, titulo_pld)
+
+        for r in range(3):
+            eixos[r, c].set_xticks(meses, x_rot)
+            eixos[r, c].title.set_fontsize(9.5)
+    for r, rotulo in enumerate(
+        ["ENA do SIN (MWmed)", "GSF_band", "PLD gatilho (R$/MWh)"]
+    ):
+        eixos[r, 0].set_ylabel(rotulo, color=TEXTO_SEC, fontsize=9)
+    handles, labels = [], []
+    for ax in (eixos[0, 0], eixos[1, 0], eixos[2, 0]):
+        for h, lab in zip(*ax.get_legend_handles_labels()):
+            if lab not in labels:
+                handles.append(h)
+                labels.append(lab)
+    fig.legend(
+        handles,
+        labels,
+        loc="lower center",
+        ncol=4,
+        frameon=False,
+        fontsize=9,
+        labelcolor=TEXTO_SEC,
+        bbox_to_anchor=(0.5, -0.03),
+    )
+    fig.suptitle(titulo, x=0.01, ha="left", color=TEXTO, fontsize=12, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    return _salvar(fig, nome)
+
+
+def faixa_bandeiras(tabelas: dict, titulo: str, nome: str) -> Path:
+    """Bandeira real, pelas séries (com probabilidade) e pela Dcide, mês a mês, para cada deck.
+
+    `tabelas` mapeia o rótulo do deck -> DataFrame indexado pelo mês com as colunas
+    cor_real, cor_series, prob_series (texto), cor_dcide e, opcionalmente, prob_dcide. As faixas de todos os decks
+    usam as mesmas colunas (meses do calendário), para ficarem alinhadas; meses anteriores
+    ao início de um deck aparecem como célula cinza, sem texto.
+    """
+    prob_dcide = (
+        "prob_dcide" if all("prob_dcide" in t for t in tabelas.values()) else None
+    )
+    linhas = [
+        ("Real", "cor_real", None),
+        ("Séries NEWAVE", "cor_series", "prob_series"),
+        ("GSF séries + Dcide", "cor_dcide", prob_dcide),
+    ]
+    meses = sorted(set().union(*(t.index for t in tabelas.values())))
+    fig, eixos = plt.subplots(
+        len(tabelas),
+        1,
+        figsize=(17, 2.7 * len(tabelas)),
+        facecolor=SUPERFICIE,
+        squeeze=False,
+    )
+    for ax, (rotulo, t) in zip(eixos[:, 0], tabelas.items()):
+        ax.set_facecolor(SUPERFICIE)
+        for j, mes in enumerate(meses):
+            for i, (_, col, prob) in enumerate(linhas):
+                if mes not in t.index or pd.isna(t.loc[mes, col]):
+                    ax.add_patch(
+                        plt.Rectangle(
+                            (j, -i),
+                            0.94,
+                            0.88,
+                            color=CINZA_FAIXA,
+                            alpha=0.5,
+                            linewidth=0,
+                        )
+                    )
+                    continue
+                cor = t.loc[mes, col]
+                ax.add_patch(
+                    plt.Rectangle(
+                        (j, -i), 0.94, 0.88, color=CORES_BANDEIRA[cor], linewidth=0
+                    )
+                )
+                txt = cor if prob is None else f"{cor}\n{t.loc[mes, prob]}"
+                claro = cor in ("Vermelha 2", "Verde", "Vermelha 1")
+                acerto = "" if i == 0 or cor == t.loc[mes, "cor_real"] else " ✗"
+                ax.text(
+                    j + 0.47,
+                    -i + 0.44,
+                    txt + acerto,
+                    ha="center",
+                    va="center",
+                    fontsize=7.2,
+                    color="#ffffff" if claro else TEXTO,
+                )
+        ax.set_xlim(-0.05, len(meses))
+        ax.set_ylim(-len(linhas) + 0.9, 0.95)
+        ax.set_xticks(
+            [j + 0.47 for j in range(len(meses))], [MESES[m - 1] for m in meses]
+        )
+        ax.set_yticks(
+            [-i + 0.44 for i in range(len(linhas))], [lin[0] for lin in linhas]
+        )
+        ax.tick_params(colors=TEXTO_SEC, labelsize=9, length=0)
+        for lado in ax.spines.values():
+            lado.set_visible(False)
+        ax.set_title(rotulo, loc="left", color=TEXTO, fontsize=11, fontweight="bold")
+    fig.suptitle(titulo, x=0.01, ha="left", color=TEXTO, fontsize=12, fontweight="bold")
     fig.tight_layout()
     return _salvar(fig, nome)

@@ -591,3 +591,14 @@ def ler_relato_ear(ano: int, mes: int) -> pd.DataFrame:
             pct = float(linhas[i + 2].split()[0])
             saida[m.group(1)] = {"ear_mwmes": mwmes, "ear_pct": pct}
     return pd.DataFrame(saida).T
+
+
+def ler_dcide(ano: int, mes: int) -> pd.Series:
+    """Curva forward da Dcide (PLD do SE, R$/MWh) para usar com o deck do NEWAVE de ano/mês.
+
+    Arquivos em data/raw/dcide/ com nome dcide_<data de publicação>_<AAAAMM do deck>.csv.
+    Retorna uma série indexada pelo mês de suprimento (Timestamp do 1º dia).
+    """
+    caminho = next((DATA_RAW / "dcide").glob(f"dcide_*_{ano}{mes:02d}.csv"))
+    df = pd.read_csv(caminho, decimal=",", parse_dates=["suprimento"])
+    return df.set_index("suprimento")["PLD_SE_CONV"].astype(float).rename("pld_dcide")

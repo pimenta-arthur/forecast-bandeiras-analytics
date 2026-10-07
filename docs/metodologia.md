@@ -379,6 +379,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D024 | 2026-10-05 | Caminho do modelo da etapa 1: GH_band = f(carga residual, térmica sem nuclear), com a carga residual vinda das projeções e a **térmica sem nuclear** modelada com a hidrologia — armazenamento (EAR) como variável principal, ENA prevista (ECMWF, % MLT) como secundária — e com os despachos já comprometidos (GNL antecipado) | Histórico de 46 meses: identidade com R² 0,999; sem sazonalidade, a térmica explica o GH (r = −0,87) e responde mais à EAR (−0,70) que à ENA (−0,38) | Proposta |
 | D025 | 2026-10-06 | **Saída principal: probabilidade de cada cor por mês** (ex.: "ago: 70% amarela, 25% vermelha 1, 5% verde"), calculada sobre os cenários (ENA do ECMWF × cenários do NEWAVE, com GSF e preço de cada cenário). Os cenários LI / esperado / LS do GSF e do preço continuam como apoio | Incorpora juntas a incerteza do GSF e do preço; mais útil para o usuário do que uma cor única | Decidido |
 | D026 | 2026-10-06 | Configuração de trabalho do teste do NEWAVE: **GSF** com os 10 cenários de ENA do SIN mais próxima no mês; **preço** com os 25 cenários de trajetória de ENA do SIN mais próxima (mais peso nos meses recentes), PLD de cada cenário pela fórmula do gatilho (4 submercados). **Sem** termo de armazenamento futuro: na data da previsão só se conhece o armazenamento atual (já embutido no deck); o armazenamento futuro entra implicitamente pela trajetória de ENA de cada série | Melhor configuração realizável no estresse (seção 8.4); a seção 8.5 usa o armazenamento futuro real (gabarito) e é limite superior | Proposta (revalidar com mais decks e com o ECMWF) |
+| D027 | 2026-10-06 | Probabilidade de cada cor pelo **erro histórico da média**: X médio das 25 séries como referência e X real ~ Normal(X médio, σ do erro histórico); cor exibida = cor da média | Melhor Brier (0,235 × 0,33) e maior probabilidade da cor real (76% × 66–69%) nos 3 decks; sem a circularidade de pesar séries pela distância à média (seção 8.7) | **Suspensa: vazamento de dados** — o σ foi estimado com erros de meses posteriores à data do deck. Refazer com σ estimado só com previsões já realizadas na data (decks de anos anteriores) |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -402,6 +403,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 - **Q19 — Viés do NEWAVE no 2º semestre de 2026:** de onde vem (carga, renováveis, térmica, vertimento)? Precisa da térmica, do armazenamento e do vertimento por série e das entradas do deck (carga e renováveis por mês).
 - **Q20 — Viés do preço na transição úmido → seco:** o custo marginal do NEWAVE fica muito abaixo do PLD gatilho em fev–mai. Causa (armazenamento inicial baixo? CVaR? DECOMP × NEWAVE)? O casamento pelo armazenamento (8.5) reduz o viés, mas fev–mar seguem abaixo do oficial; testar correção de viés por mês e a curva Dcide.
 - **Q21 — Viés do armazenamento das séries do NEWAVE:** o armazenamento real do SE ficou abaixo de ~90% das séries do deck de jan/2026. Se for sistemático (com mais decks), estimar e corrigir na escolha das séries do preço.
+- **Q22 — Backtest sem vazamento (auditoria):** (1) σ da probabilidade só com erros já realizados na data do deck (decks de 2023–2025); (2) ANDE, PCH e pesos de carga do mês-alvo devem vir do deck do NEWAVE da data, não do PMO do próprio mês; (3) k = 25, k = 10 e meia-vida de 2 meses foram escolhidos em 2026 e precisam ser validados em outros anos; (4) a ENA de referência é a real (oráculo) até entrar o ECMWF.
 - **Q14 — ENA não vira geração hidráulica diretamente:** a hidráulica do DECOMP é, em grande parte, a carga menos eólica, solar e térmica; a ENA entra pelo despacho térmico e pelo armazenamento. A conversão ENA → GH precisa incluir carga e renováveis (ex.: regressão de GH_band em carga líquida, ENA % MLT e EAR).
 - **Q11 — Definição do horizonte:** a cor de M é decidida por volta do dia 25 de M−1. Em 04/10/2026, outubro já é conhecido, então M+1 = novembro. Fixar a data de corte de cada previsão no backtest.
 
@@ -575,3 +577,100 @@ Armazenamento final por série (% EARmax, por submercado e SIN). Para o mês *m*
   com GSF levemente subestimado (0,78–0,79 contra 0,82) e preço acima (R$ 125–131 contra 90). Junho do deck de fev
   continua vermelha 1 (preço R$ 309 contra 223). Cor certa: 16/19, a mesma contagem, mas com erros em meses de fronteira.
 - Cuidado: grade de pesos escolhida na própria amostra (19 meses-previsão, oráculo de ENA e armazenamento).
+
+### 8.6 Cenários de comparação do NEWAVE (decks de jan e fev/2026, ENA real como referência)
+
+**Cenário referência inicial** (congelado em 2026-10-06; `notebooks/02_newave.ipynb`, figuras em
+`reports/figures/cenario_referencia_inicial/`):
+
+- GSF: em cada mês, média das **10 séries** com ENA do SIN do mês mais próxima da referência.
+- Preço: **25 séries** pela trajetória de ENA do SIN até o mês (erro relativo², peso cai à metade a cada 2 meses para trás);
+  PLD gatilho de cada série pela fórmula do boletim (4 submercados).
+- Cor exibida: ábaco com o GSF médio e o PLD médio ("cor pelas médias").
+- Probabilidade de cada cor: 10 × 25 = 250 combinações de GSF e preço (tratados como independentes), peso igual.
+- Preço Dcide: curva forward do SE publicada na época do deck (`dcide_<publicação>_<deck>.csv`), com o GSF das séries.
+
+**Cenário mesma série** (`notebooks/02b_newave_mesma_serie.ipynb`, figuras em `reports/figures/cenario_mesma_serie/`):
+única mudança, o GSF e o preço vêm das **mesmas 25 séries** (escolhidas pela trajetória); probabilidade = fração das 25
+séries em cada cor.
+
+| Deck | Cenário | Erro médio GSF | Cor pelas médias | Cor mais provável | Prob. média da cor real | Erro do adicional esperado (R$/MWh) |
+|---|---|---|---|---|---|---|
+| jan/2026 | referência inicial | 0,033 | 9/10 | 8/10 | 69% | 4,5 |
+| jan/2026 | mesma série | 0,043 | 9/10 | 7/10 | 68% | 4,2 |
+| fev/2026 | referência inicial | 0,038 | 7/9 | 6/9 | 64% | 4,7 |
+| fev/2026 | mesma série | 0,046 | 8/9 | 6/9 | 62% | 6,0 |
+
+Leitura: a escolha pela trajetória é pior para o **nível** do GSF (erro +0,008 a +0,010) do que a escolha pela ENA do mês,
+mas parear GSF e preço deixa as **caudas coerentes**: a probabilidade de vermelha sobe nos meses secos (ex.: deck de fev,
+jul: 35% → 40%; out: 0% → 8%), como esperado quando série seca traz GSF baixo e preço alto juntos. No agregado, os dois
+cenários ficam próximos nesta amostra. Candidato a testar: parear as séries e corrigir o nível do GSF de cada série pela
+estimativa da ENA do mês (mantém a coerência e recupera a precisão do nível).
+
+**Memorial da probabilidade de cada cor** (vale para os dois cenários): para cada par (GSF, PLD) — combinação no cenário de
+referência, série no cenário mesma série — calcula-se X = PLD × máx(0, 1 − GSF arredondado em 2 casas) e a cor pelos limites
+27,48 / 68,99 / 95,05 R$/MWh; a probabilidade é a fração dos pares em cada cor. A "cor pelas médias" não é a cor mais
+provável quando a distribuição de preço é bimodal (parte das séries no piso): ex. deck de jan, jul/2026, médias →
+amarela (X = 121,8 × 0,30 = 36,5), mas 12 das 25 séries estão no piso (R$ 57) → verde 48%.
+
+**Cenário mediana** (`notebooks/02c_newave_mediana.ipynb`, figuras em `reports/figures/cenario_mediana/`): parte do cenário
+mesma série; única mudança, a **cor exibida passa a ser a cor mediana** da distribuição (primeira cor, de verde a vermelha 2,
+com probabilidade acumulada ≥ 50%), com a distribuição completa no texto. Na linha da Dcide, a distribuição combina o GSF de
+cada uma das 25 séries com o preço da Dcide.
+
+| Deck | Séries: pelas médias | Séries: mediana | Dcide: pelas médias | Dcide: mediana | Prob. média da cor real (séries / Dcide) |
+|---|---|---|---|---|---|
+| jan/2026 | 9/10 | 9/10 | 6/10 | 6/10 | 68% / 57% |
+| fev/2026 | 8/9 | 8/9 | 4/9 | 4/9 | 62% / 45% |
+
+A cor mediana mudou dois meses (deck de fev): mai passou de verde (errado) a amarela (certo; Vd 44% Am 56%) e jun de
+amarela (certo) a vermelha 1 (errado; Am 28% V1 56% V2 12%). Mesmo número de acertos, mas a cor exibida passa a ser sempre
+coerente com a distribuição mostrada. Na Dcide a distribuição é estreita (só a incerteza do GSF; preço único): quando o
+preço da Dcide erra (2º semestre), erra com muita confiança (ex.: jul e ago com V2 96–100%).
+
+**Três decks (jan, fev e mar/2026) — cor pela média × pela mediana** (`notebooks/02d_newave_3decks.ipynb`, figuras em
+`reports/figures/cenario_3decks/`; método mesma série; não há curva Dcide para o deck de mar):
+
+| Deck | Séries: média | Séries: mediana | Dcide: média | Dcide: mediana | Erro médio GSF | Erro médio do PLD (R$) | Prob. média da cor real |
+|---|---|---|---|---|---|---|---|
+| jan/2026 | 9/10 | 9/10 | 6/10 | 6/10 | 0,043 | 90 | 68% |
+| fev/2026 | 8/9 | 8/9 | 4/9 | 4/9 | 0,046 | 69 | 62% |
+| mar/2026 | 5/8 | 5/8 | — | — | 0,036 | 75 | 68% |
+
+Média e mediana deram a mesma cor em 25 de 27 meses-previsão; as duas diferenças (deck de fev, mai e jun) se compensam
+(22/27 acertos nas duas regras). **Maio erra nos três decks** (GSF superestimado em +0,06/+0,07 e preço abaixo do real),
+e o deck de mar erra também jun (preço R$ 283 × 223 → V1) e set (verde × amarela).
+
+### 8.7 Probabilidade de cada cor: pesos das séries × calibração pelo erro da média (3 decks, 27 meses-previsão)
+
+Problema: com peso igual nas 25 séries, séries no piso de preço puxam a probabilidade de verde mesmo quando a cor pela
+média é amarela. Métodos testados (método mesma série; ENA real como referência):
+
+| Método | Cor mais provável certa | Concorda com a cor da média | Prob. média da cor real | Brier |
+|---|---|---|---|---|
+| 1. Séries com peso igual | 19/27 | 20/27 | 66% | 0,337 |
+| 2. Peso pela proximidade do X da série ao X médio | 20/27 | 23/27 | 69% | 0,330 |
+| 3. Peso pela proximidade da ENA da série à de referência | 19/27 | 20/27 | 66% | 0,340 |
+| 4. Só as 10 séries de ENA mais próxima | 19/27 | 22/27 | 66% | 0,365 |
+| **5. Média + erro histórico da média** | **22/27** | **27/27** | **76%** | **0,235** |
+
+- O método 2 é circular (a média vem das próprias séries): melhora a média geral, mas nos meses em que a cor da média erra
+  reduz ainda mais a probabilidade da cor real (ex.: deck de jan, mai: 24% → 12%).
+- O método 3 quase não muda nada: as 25 séries já têm ENA parecida, então os pesos ficam quase iguais.
+- **Método 5 (proposto):** X médio = PLD médio × (1 − GSF médio) das 25 séries é a referência; supõe-se X real ~ Normal(X médio,
+  σ), com σ = desvio do erro histórico (X real − X médio) nos meses não úmidos (13,4 R$/MWh; viés +3,4), estimado deixando de
+  fora o mês avaliado; a probabilidade de cada cor é a chance de o X real cair em cada faixa (27,48 / 68,99 / 95,05). Com GSF
+  médio ≥ 0,96, verde com 100%. A cor mais provável coincide sempre com a cor da média, e a probabilidade reflete quanto a média
+  costuma errar — não o espalhamento bimodal das séries. Nos meses em que a cor da média errou, a cor real ainda recebe 20–45%.
+- **A probabilidade é só das séries do NEWAVE.** A Dcide é um preço único e aparece apenas com a cor (ábaco com o GSF médio das
+  séries e o preço da Dcide). Implementado em `notebooks/02e_newave_calibrado.ipynb` (figuras em `reports/figures/cenario_calibrado/`).
+- Cuidados: σ estimado com 27 pontos de um único ano; erro tratado como normal e igual em todas as estações (a transição
+  úmido → seco erra mais). Revalidar com mais decks.
+
+> ⚠️ **Correção (2026-10-06): o σ da seção 8.7 tem vazamento de dados.** Para cada previsão, o σ foi estimado com os erros dos
+> outros meses de 2026 (sem o próprio mês-alvo), mas a maioria desses meses é **posterior à data do deck** (ex.: deck de fev
+> prevendo jul usou os erros de mai, jun, ago, set e out). Na data de cada deck só se conhece o X real de meses já encerrados
+> (deck de jan: até dez/2025; fev: até jan/2026; mar: até fev/2026), e jan–fev/2026 são meses úmidos. Logo, **não há erro
+> legítimo em 2026 para estimar o σ**: ele precisa vir de decks de anos anteriores, com janela que avança no tempo e,
+> idealmente, por horizonte (M+1 … M+6). Os números de Brier e de probabilidade da cor real do método 5 são otimistas e não
+> valem como desempenho fora da amostra. A cor pela média (sem σ) não é afetada.
