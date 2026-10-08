@@ -59,6 +59,11 @@ def referencia_membros(deck: pd.Period, base: pd.DataFrame) -> pd.DataFrame:
     return tab
 
 
+def referencia_quantil(deck: pd.Period, base: pd.DataFrame, q: float) -> pd.Series:
+    """Cenário de ENA do SIN = quantil q, mês a mês, dos membros recentrados (q = 0,1: LI seco; 0,9: LS úmido)."""
+    return referencia_membros(deck, base).quantile(q).rename(None)
+
+
 def referencia_climatologia(deck: pd.Period, base: pd.DataFrame) -> pd.Series:
     """ENA do SIN = 100% da MLT (MLT do ECMWF da rodada do deck); mês do deck pelo PMO."""
     _, mem = _produtos()

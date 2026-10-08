@@ -1,0 +1,256 @@
+<title>Previsor de Bandeiras Tarifárias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="estilo.css">
+
+<main>
+  <nav class="nav" aria-label="Páginas">
+    <span class="marca">Previsor de Bandeiras</span>
+    <a href="./" aria-current="page">Avaliação</a>
+    <a href="metodologia.html">Metodologia</a>
+  </nav>
+  <header>
+    <span class="rotulo">Avaliação para a equipe de macro · outubro de 2026</span>
+    <h1>Previsor de Bandeiras Tarifárias</h1>
+    <p class="lead">Dá para usar. Até três meses à frente, o modelo acerta a cor em cerca de 3 de cada 4 meses. De quatro a seis meses, serve como cenário, com faixa larga. Em todos os horizontes ele acerta cerca do dobro de uma regra ingênua.</p>
+  </header>
+
+  <section aria-labelledby="s-veredito">
+    <h2 id="s-veredito">Recomendação</h2>
+    <div class="veredito">
+      <div class="cartao">
+        <span class="selo usar">Usar como previsão</span>
+        <h3>M+1 a M+3</h3>
+        <div class="cifra num">72%<small> de acerto da cor</small></div>
+        <p>Entregar a cor esperada com a probabilidade de cada cor. O acerto é igual ao que o modelo teria com a hidrologia perfeita. A faixa entre os cenários seco e úmido cobre de uma a duas cores.</p>
+      </div>
+      <div class="cartao">
+        <span class="selo cenario">Usar como cenário</span>
+        <h3>M+4 a M+6</h3>
+        <div class="cifra num">42%<small> de acerto da cor</small></div>
+        <p>Entregar cenário seco, esperado e úmido, com aviso de baixa confiança. A faixa contém a cor real, mas costuma ir de verde a vermelha 2. Ainda assim, o acerto é o dobro de repetir a bandeira atual (cerca de 16%).</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-como">
+    <h2 id="s-como">Como a previsão é feita</h2>
+    <p class="texto">A bandeira sai de uma regra da ANEEL: o índice X = PLD gatilho × (1 − GSF) decide a cor (verde até 27,48; amarela até 68,99; vermelha 1 até 95,05; acima disso, vermelha 2). O modelo prevê os dois insumos e aplica a regra.</p>
+    <div class="fluxo">
+      <div class="passo"><span class="n">1 · Hidrologia</span><p>ENA prevista pelo ECMWF (sazonal), do mês seguinte até M+6.</p></div>
+      <div class="passo"><span class="n">2 · Séries do NEWAVE</span><p>Das 2.000 séries do deck oficial, escolhem-se as 15 com trajetória de ENA mais parecida com a do ECMWF.</p></div>
+      <div class="passo"><span class="n">3 · GSF e preço</span><p>Média do GSF e do PLD gatilho dessas 15 séries, com as regras da CCEE.</p></div>
+      <div class="passo"><span class="n">4 · Cor e cenários</span><p>Cor pela regra, probabilidade pelo erro histórico. Cenário seco (P10 da ENA) e úmido (P90) repetem o processo.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-acerto">
+    <h2 id="s-acerto">Acerto contra regras ingênuas</h2>
+    <p class="texto">Backtest com 16 decks (jan/2025 a set/2026) e 89 previsões, simulando alguém na data de cada deck, só com a informação disponível naquele dia. A linha tracejada é o oráculo (ENA real no lugar da prevista): é o teto do método, não um desempenho esperado.</p>
+    <div class="grafico" id="grafico">
+      <div class="legenda">
+        <span><i style="background:var(--bar-modelo)"></i>Modelo (ECMWF)</span>
+        <span><i style="background:var(--bar-saz)"></i>Mesmo mês do ano anterior</span>
+        <span><i style="background:var(--bar-pers)"></i>Repetir a bandeira atual</span>
+        <span><i class="linha"></i>Oráculo (ENA real)</span>
+      </div>
+      <svg id="barras" viewBox="0 0 720 260" role="img" aria-label="Acerto da cor por horizonte: modelo, regras ingênuas e oráculo" style="width:100%;height:auto;display:block"></svg>
+      <div class="dica" id="dica" hidden></div>
+    </div>
+    <details>
+      <summary>Ver os números</summary>
+      <div class="rolagem" style="margin-top:10px">
+        <table>
+          <thead><tr><th>Acerto da cor</th><th class="n">M+1</th><th class="n">M+2</th><th class="n">M+3</th><th class="n">M+4</th><th class="n">M+5</th><th class="n">M+6</th></tr></thead>
+          <tbody id="tab-acerto"></tbody>
+        </table>
+      </div>
+    </details>
+    <ul class="lista texto">
+      <li><span class="tag">Erra por menos</span><span>Quando erra, o modelo fica em média a 0,33 cor da real em M+1–3. Repetir a bandeira atual fica a 0,74.</span></li>
+      <li><span class="tag">Pega mudanças</span><span>Em 64 das 89 previsões a cor mudou em relação à do deck. O modelo acertou 55% delas; repetir a bandeira, por definição, nenhuma.</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-2026">
+    <h2 id="s-2026">Histórico deck a deck</h2>
+    <p class="texto">Todos os 16 decks com previsão do ECMWF, de janeiro de 2025 a setembro de 2026 (não há rodada para os decks de setembro e outubro de 2025). Cada bloco é um deck. As linhas mostram a bandeira real, o cenário esperado e os cenários seco (LI) e úmido (LS). Escolha no seletor o ano dos meses previstos; aparecem todos os decks que previram algum mês daquele ano (os decks de novembro e dezembro de 2025 também aparecem em 2026). Passe o cursor sobre a célula do esperado para ver a probabilidade, o GSF e o preço. O traço vertical marca a virada do ano.</p>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Previsões já realizadas</th><th class="n">Decks</th><th class="n">Previsões</th><th class="n">Esperado acerta a cor</th><th class="n">Cor real dentro de LS–LI</th></tr></thead>
+        <tbody>
+          <tr><td>Decks de 2025</td><td class="n">10</td><td class="n">59</td><td class="n">37 (63%)</td><td class="n">55 (93%)</td></tr>
+          <tr><td>Decks de 2026</td><td class="n">6</td><td class="n">30</td><td class="n">14 (47%)</td><td class="n">29 (97%)</td></tr>
+          <tr class="destaque"><td>Total</td><td class="n">16</td><td class="n">89</td><td class="n">51 (57%)</td><td class="n">84 (94%)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="anos" id="anos" role="group" aria-label="Ano dos meses previstos">
+      <button type="button" id="ano-2025" data-ano="2025">2025</button>
+      <button type="button" id="ano-2026" data-ano="2026">2026</button>
+      <button type="button" id="ano-todos" data-ano="todos">Todos</button>
+    </div>
+    <div class="chaves">
+      <span><b style="background:var(--vd)"></b>Verde</span>
+      <span><b style="background:var(--am)"></b>Amarela</span>
+      <span><b style="background:var(--v1)"></b>Vermelha 1</span>
+      <span><b style="background:var(--v2)"></b>Vermelha 2</span>
+      <span>✗ no esperado: cor errada · ✗ no LI ou LS: real fora da faixa</span>
+    </div>
+    <div class="rolagem"><div class="faixa" id="faixa"></div></div>
+    <ul class="lista texto">
+      <li><span class="tag">Início de 2025</span><span>Quatro das cinco vezes em que a cor real saiu da faixa estão nos decks de janeiro e fevereiro de 2025, para maio e junho: o preço real subiu acima de tudo o que esses decks simulavam, e até o cenário seco ficou verde ou amarelo.</span></li>
+      <li><span class="tag">2º semestre de 2026</span><span>O ECMWF previu seca e o período foi úmido. A cor real ficou colada no cenário úmido e o esperado errou para o lado caro várias vezes seguidas. A quinta saída da faixa está aqui (deck de maio para agosto).</span></li>
+      <li><span class="tag">Decks iniciais</span><span>Os primeiros decks de 2025 não têm probabilidade: ainda não havia erros passados suficientes para calibrá-la sem usar dados do futuro.</span></li>
+      <li><span class="tag">Mais recente</span><span>O deck de setembro de 2026 acertou outubro e prevê verde para novembro (80%) e dezembro (100%).</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-erro">
+    <h2 id="s-erro">Onde o modelo erra: no preço</h2>
+    <p class="texto">Em cada erro de M+4 a M+6, trocamos um insumo de cada vez pelo valor real. É um diagnóstico com dados do futuro, não um método de previsão.</p>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>M+4 a M+6</th><th class="n">Acerto</th><th class="n">Erro médio do GSF</th><th class="n">Erro médio do PLD</th></tr></thead>
+        <tbody>
+          <tr><td>Modelo como está</td><td class="n">42%</td><td class="n">0,053</td><td class="n">R$ 94</td></tr>
+          <tr><td>Com o GSF real</td><td class="n">49%</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr class="destaque"><td>Com o PLD real</td><td class="n">86%</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>Oráculo (ENA real)</td><td class="n">75%</td><td class="n">0,040</td><td class="n">R$ 53</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="texto">O GSF piora pouco quando a hidrologia vem do ECMWF. O preço quase dobra o erro, porque reage muito mais à mesma hidrologia errada. Há também meses em que o preço real ficou fora de tudo o que o deck oficial simulava (março de 2025 e março de 2026); nenhuma escolha de hidrologia corrigiria esses casos.</p>
+    <figure>
+      <img src="trajetorias_deck_mar26.png" alt="Trajetórias de ENA, GSF e PLD do deck de março de 2026 para os cenários esperado, seco e úmido, de abril a setembro de 2026, comparadas com o real" loading="lazy">
+      <figcaption>Deck de março de 2026. Azul: esperado; laranja: seco (LI); verde: úmido (LS); preto: real. O GSF dos três cenários fica perto do real. O preço do seco chega a R$ 575 e o do esperado a R$ 270, contra R$ 130–170 realizados.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="s-macro">
+    <h2 id="s-macro">O que entregar para a macro</h2>
+    <p class="texto">Para a projeção da energia no IPCA, sugiro entregar o adicional tarifário esperado de cada mês, usando a probabilidade inteira e não só a cor mais provável:</p>
+    <div class="formula">adicional esperado (R$/100 kWh) = P(amarela) × adicional amarela + P(vermelha 1) × adicional V1 + P(vermelha 2) × adicional V2</div>
+    <p class="texto">Os valores do adicional por cor devem ser os vigentes na resolução da ANEEL; precisam ser confirmados antes do primeiro envio. Junto, vão a cor esperada e os cenários seco e úmido, com a confiança de cada horizonte.</p>
+  </section>
+
+  <section aria-labelledby="s-ressalvas">
+    <h2 id="s-ressalvas">Ressalvas</h2>
+    <ul class="lista texto">
+      <li><span class="tag">Amostra pequena</span><span>16 decks e 89 previsões, todos em 2025–2026, dois anos secos. A amostra cresce um deck por mês.</span></li>
+      <li><span class="tag">Dentro da amostra</span><span>O número de séries (15) e o peso da trajetória foram escolhidos no mesmo período avaliado. As previsões são fora da amostra, mas essa escolha não é.</span></li>
+      <li><span class="tag">2026 pior</span><span>O acerto caiu de 63% (decks de 2025) para 47% (decks de 2026), pelo erro do ECMWF no segundo semestre.</span></li>
+      <li><span class="tag">Oráculos</span><span>Os números com ENA real ou PLD real são limites e diagnósticos, não desempenho esperado.</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-passos">
+    <h2 id="s-passos">Próximos passos</h2>
+    <ol class="passos texto">
+      <li><strong>Rotina mensal.</strong> Deck e ECMWF de cada mês geram as probabilidades e o adicional esperado. Cada mês novo amplia o backtest.</li>
+      <li><strong>Preço.</strong> Corrigir o viés na transição do período úmido para o seco e testar a combinação com a curva da Dcide, o que exige o histórico de curvas de 2025.</li>
+      <li><strong>Mais história.</strong> Decks de 2023–2024, se houver ECMWF para eles, para avaliar fora do período em que os parâmetros foram escolhidos.</li>
+    </ol>
+  </section>
+
+  <footer>Fontes: decks do NEWAVE da CCEE, previsão sazonal do ECMWF (SEAS5), boletins InfoBandeira da CCEE e REH ANEEL 3.306/2024. Método passo a passo na página <a href="metodologia.html">Metodologia</a>; registro completo em <code>docs/metodologia.md</code> e cálculo no notebook <code>03c_cenarios_li_ls</code>.</footer>
+</main>
+
+<script>
+(function () {
+  const H = ["M+1", "M+2", "M+3", "M+4", "M+5", "M+6"];
+  const S = [
+    { nome: "Modelo (ECMWF)", cor: "var(--bar-modelo)", v: [75, 67, 73, 40, 53, 31] },
+    { nome: "Mesmo mês do ano anterior", cor: "var(--bar-saz)", v: [50, 47, 33, 20, 20, 15] },
+    { nome: "Repetir a bandeira atual", cor: "var(--bar-pers)", v: [56, 33, 27, 20, 13, 15] },
+  ];
+  const ORACULO = [69, 67, 73, 67, 80, 79];
+
+  const tb = document.getElementById("tab-acerto");
+  [...S, { nome: "Oráculo (ENA real)", v: ORACULO }].forEach(s => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${s.nome}</td>` + s.v.map(x => `<td class="n">${x}%</td>`).join("");
+    tb.appendChild(tr);
+  });
+
+  const svg = document.getElementById("barras");
+  const ns = "http://www.w3.org/2000/svg";
+  const W = 720, Ht = 260, m = { l: 40, r: 10, t: 14, b: 30 };
+  const iw = W - m.l - m.r, ih = Ht - m.t - m.b;
+  const y = v => m.t + ih - (v / 100) * ih;
+  const el = (tag, at) => { const e = document.createElementNS(ns, tag); for (const k in at) e.setAttribute(k, at[k]); svg.appendChild(e); return e; };
+  [0, 25, 50, 75, 100].forEach(t => {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: "var(--rule)", "stroke-width": 1 });
+    el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }).textContent = t + "%";
+  });
+  const gw = iw / H.length, bw = Math.min(26, (gw - 22) / S.length), gap = 2;
+  const dica = document.getElementById("dica"), box = document.getElementById("grafico");
+  H.forEach((h, i) => {
+    const x0 = m.l + i * gw + (gw - (bw * S.length + gap * (S.length - 1))) / 2;
+    S.forEach((s, j) => {
+      const v = s.v[i], x = x0 + j * (bw + gap), hh = y(0) - y(v);
+      const r = el("rect", { x, y: y(v), width: bw, height: hh, fill: s.cor, rx: 2 });
+      const alvo = el("rect", { x: x - 1, y: m.t, width: bw + 2, height: ih, fill: "transparent" });
+      if (j === 0) el("text", { x: x + bw / 2, y: y(v) - 5, "text-anchor": "middle", class: "valor" }).textContent = v + "%";
+      const mostra = () => {
+        const b = svg.getBoundingClientRect(), k = b.width / W;
+        dica.textContent = `${h} · ${s.nome}: ${v}% · oráculo ${ORACULO[i]}%`;
+        dica.style.left = (x + bw / 2) * k + 18 + "px";
+        dica.style.top = y(v) * k + 52 + "px";
+        dica.hidden = false;
+      };
+      alvo.addEventListener("mouseenter", mostra);
+      alvo.addEventListener("mouseleave", () => { dica.hidden = true; });
+    });
+    const xa = m.l + i * gw + 8, xb = m.l + (i + 1) * gw - 8;
+    el("line", { x1: xa, x2: xb, y1: y(ORACULO[i]), y2: y(ORACULO[i]), stroke: "var(--bar-oraculo)", "stroke-width": 2, "stroke-dasharray": "5 4" });
+    el("text", { x: m.l + i * gw + gw / 2, y: Ht - 8, "text-anchor": "middle" }).textContent = h;
+  });
+
+  const D = [{"deck": "2025-01", "alvo": "2025-02", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,08 · R$ 59"}, {"deck": "2025-01", "alvo": "2025-03", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,05 · R$ 61"}, {"deck": "2025-01", "alvo": "2025-04", "h": 3, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,00 · R$ 60"}, {"deck": "2025-01", "alvo": "2025-05", "h": 4, "real": "Amarela", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,90 · R$ 70"}, {"deck": "2025-01", "alvo": "2025-06", "h": 5, "real": "Vermelha 1", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,79 · R$ 85"}, {"deck": "2025-01", "alvo": "2025-07", "h": 6, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 1", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,69 · R$ 158"}, {"deck": "2025-02", "alvo": "2025-03", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,04 · R$ 67"}, {"deck": "2025-02", "alvo": "2025-04", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,01 · R$ 78"}, {"deck": "2025-02", "alvo": "2025-05", "h": 3, "real": "Amarela", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,90 · R$ 84"}, {"deck": "2025-02", "alvo": "2025-06", "h": 4, "real": "Vermelha 1", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,79 · R$ 158"}, {"deck": "2025-02", "alvo": "2025-07", "h": 5, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,70 · R$ 217"}, {"deck": "2025-02", "alvo": "2025-08", "h": 6, "real": "Vermelha 2", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,69 · R$ 244"}, {"deck": "2025-03", "alvo": "2025-04", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,98 · R$ 186"}, {"deck": "2025-03", "alvo": "2025-05", "h": 2, "real": "Amarela", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,88 · R$ 231"}, {"deck": "2025-03", "alvo": "2025-06", "h": 3, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 1", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,75 · R$ 294"}, {"deck": "2025-03", "alvo": "2025-07", "h": 4, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 328"}, {"deck": "2025-03", "alvo": "2025-08", "h": 5, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 354"}, {"deck": "2025-03", "alvo": "2025-09", "h": 6, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 355"}, {"deck": "2025-04", "alvo": "2025-05", "h": 1, "real": "Amarela", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,87 · R$ 217"}, {"deck": "2025-04", "alvo": "2025-06", "h": 2, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 1", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,77 · R$ 256"}, {"deck": "2025-04", "alvo": "2025-07", "h": 3, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,68 · R$ 252"}, {"deck": "2025-04", "alvo": "2025-08", "h": 4, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 325"}, {"deck": "2025-04", "alvo": "2025-09", "h": 5, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,68 · R$ 320"}, {"deck": "2025-04", "alvo": "2025-10", "h": 6, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,72 · R$ 333"}, {"deck": "2025-05", "alvo": "2025-06", "h": 1, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 1", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,78 · R$ 301"}, {"deck": "2025-05", "alvo": "2025-07", "h": 2, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,70 · R$ 320"}, {"deck": "2025-05", "alvo": "2025-08", "h": 3, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,68 · R$ 344"}, {"deck": "2025-05", "alvo": "2025-09", "h": 4, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,66 · R$ 346"}, {"deck": "2025-05", "alvo": "2025-10", "h": 5, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,71 · R$ 357"}, {"deck": "2025-05", "alvo": "2025-11", "h": 6, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,75 · R$ 406"}, {"deck": "2025-06", "alvo": "2025-07", "h": 1, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 298"}, {"deck": "2025-06", "alvo": "2025-08", "h": 2, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,65 · R$ 336"}, {"deck": "2025-06", "alvo": "2025-09", "h": 3, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,67 · R$ 335"}, {"deck": "2025-06", "alvo": "2025-10", "h": 4, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,74 · R$ 332"}, {"deck": "2025-06", "alvo": "2025-11", "h": 5, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,79 · R$ 351"}, {"deck": "2025-06", "alvo": "2025-12", "h": 6, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,83 · R$ 431"}, {"deck": "2025-07", "alvo": "2025-08", "h": 1, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,62 · R$ 259"}, {"deck": "2025-07", "alvo": "2025-09", "h": 2, "real": "Vermelha 2", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,70 · R$ 287"}, {"deck": "2025-07", "alvo": "2025-10", "h": 3, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,75 · R$ 266"}, {"deck": "2025-07", "alvo": "2025-11", "h": 4, "real": "Vermelha 1", "esp": "Amarela", "li": "Vermelha 2", "ls": "Amarela", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,81 · R$ 322"}, {"deck": "2025-07", "alvo": "2025-12", "h": 5, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,85 · R$ 338"}, {"deck": "2025-08", "alvo": "2025-09", "h": 1, "real": "Vermelha 2", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 2", "prob": "V1 22% V2 77%", "gp": "GSF 0,65 · R$ 306"}, {"deck": "2025-08", "alvo": "2025-10", "h": 2, "real": "Vermelha 1", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "V1 43% V2 53%", "gp": "GSF 0,72 · R$ 343"}, {"deck": "2025-08", "alvo": "2025-11", "h": 3, "real": "Vermelha 1", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 23% V1 58% V2 20%", "gp": "GSF 0,78 · R$ 369"}, {"deck": "2025-08", "alvo": "2025-12", "h": 4, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 0,80 · R$ 388"}, {"deck": "2025-08", "alvo": "2026-01", "h": 5, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,03 · R$ 290"}, {"deck": "2025-08", "alvo": "2026-02", "h": 6, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "sem histórico para a probabilidade", "gp": "GSF 1,08 · R$ 143"}, {"deck": "2025-11", "alvo": "2025-12", "h": 1, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 54% V1 42%", "gp": "GSF 0,80 · R$ 336"}, {"deck": "2025-11", "alvo": "2026-01", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,01 · R$ 291"}, {"deck": "2025-11", "alvo": "2026-02", "h": 3, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,07 · R$ 113"}, {"deck": "2025-11", "alvo": "2026-03", "h": 4, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,08 · R$ 119"}, {"deck": "2025-11", "alvo": "2026-04", "h": 5, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,00 · R$ 101"}, {"deck": "2025-11", "alvo": "2026-05", "h": 6, "real": "Amarela", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 72% Am 26%", "gp": "GSF 0,89 · R$ 107"}, {"deck": "2025-12", "alvo": "2026-01", "h": 1, "real": "Verde", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 0,97 · R$ 163"}, {"deck": "2025-12", "alvo": "2026-02", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,06 · R$ 144"}, {"deck": "2025-12", "alvo": "2026-03", "h": 3, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,07 · R$ 174"}, {"deck": "2025-12", "alvo": "2026-04", "h": 4, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 0,99 · R$ 171"}, {"deck": "2025-12", "alvo": "2026-05", "h": 5, "real": "Amarela", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 69% Am 29%", "gp": "GSF 0,88 · R$ 125"}, {"deck": "2025-12", "alvo": "2026-06", "h": 6, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 35% Am 55% V1 9%", "gp": "GSF 0,79 · R$ 177"}, {"deck": "2026-01", "alvo": "2026-02", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,07 · R$ 151"}, {"deck": "2026-01", "alvo": "2026-03", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,09 · R$ 167"}, {"deck": "2026-01", "alvo": "2026-04", "h": 3, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 0,99 · R$ 218"}, {"deck": "2026-01", "alvo": "2026-05", "h": 4, "real": "Amarela", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 65% Am 33%", "gp": "GSF 0,88 · R$ 146"}, {"deck": "2026-01", "alvo": "2026-06", "h": 5, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 48% Am 46% V1 5%", "gp": "GSF 0,79 · R$ 137"}, {"deck": "2026-01", "alvo": "2026-07", "h": 6, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Verde", "prob": "Am 36% V1 38% V2 23%", "gp": "GSF 0,66 · R$ 225"}, {"deck": "2026-02", "alvo": "2026-03", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,07 · R$ 236"}, {"deck": "2026-02", "alvo": "2026-04", "h": 2, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 1,00 · R$ 203"}, {"deck": "2026-02", "alvo": "2026-05", "h": 3, "real": "Amarela", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "Vd 30% Am 69%", "gp": "GSF 0,86 · R$ 253"}, {"deck": "2026-02", "alvo": "2026-06", "h": 4, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 10% Am 53% V1 28% V2 9%", "gp": "GSF 0,76 · R$ 250"}, {"deck": "2026-02", "alvo": "2026-07", "h": 5, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 13% V1 33% V2 54%", "gp": "GSF 0,65 · R$ 278"}, {"deck": "2026-02", "alvo": "2026-08", "h": 6, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "V2 96%", "gp": "GSF 0,60 · R$ 351"}, {"deck": "2026-03", "alvo": "2026-04", "h": 1, "real": "Verde", "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 0,98 · R$ 251"}, {"deck": "2026-03", "alvo": "2026-05", "h": 2, "real": "Amarela", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "Vd 39% Am 60%", "gp": "GSF 0,86 · R$ 225"}, {"deck": "2026-03", "alvo": "2026-06", "h": 3, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Am 57% V1 40%", "gp": "GSF 0,75 · R$ 265"}, {"deck": "2026-03", "alvo": "2026-07", "h": 4, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 16% V1 35% V2 48%", "gp": "GSF 0,64 · R$ 261"}, {"deck": "2026-03", "alvo": "2026-08", "h": 5, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 9% V1 28% V2 63%", "gp": "GSF 0,62 · R$ 272"}, {"deck": "2026-03", "alvo": "2026-09", "h": 6, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Verde", "prob": "Am 27% V1 39% V2 33%", "gp": "GSF 0,69 · R$ 271"}, {"deck": "2026-04", "alvo": "2026-05", "h": 1, "real": "Amarela", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 60% Am 40%", "gp": "GSF 0,82 · R$ 132"}, {"deck": "2026-04", "alvo": "2026-06", "h": 2, "real": "Amarela", "esp": "Amarela", "li": "Amarela", "ls": "Verde", "prob": "Vd 11% Am 83% V1 6%", "gp": "GSF 0,77 · R$ 200"}, {"deck": "2026-04", "alvo": "2026-07", "h": 3, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 46% V1 49%", "gp": "GSF 0,68 · R$ 220"}, {"deck": "2026-04", "alvo": "2026-08", "h": 4, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 26% V1 39% V2 34%", "gp": "GSF 0,67 · R$ 256"}, {"deck": "2026-04", "alvo": "2026-09", "h": 5, "real": "Amarela", "esp": "Amarela", "li": "Vermelha 2", "ls": "Amarela", "prob": "Vd 10% Am 53% V1 28% V2 9%", "gp": "GSF 0,72 · R$ 216"}, {"deck": "2026-04", "alvo": "2026-10", "h": 6, "real": "Verde", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 30% Am 56% V1 12%", "gp": "GSF 0,77 · R$ 179"}, {"deck": "2026-05", "alvo": "2026-06", "h": 1, "real": "Amarela", "esp": "Vermelha 1", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 10% V1 58% V2 32%", "gp": "GSF 0,73 · R$ 326"}, {"deck": "2026-05", "alvo": "2026-07", "h": 2, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "V2 95%", "gp": "GSF 0,65 · R$ 342"}, {"deck": "2026-05", "alvo": "2026-08", "h": 3, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Vermelha 1", "prob": "V2 97%", "gp": "GSF 0,65 · R$ 350"}, {"deck": "2026-05", "alvo": "2026-09", "h": 4, "real": "Amarela", "esp": "Vermelha 2", "li": "Vermelha 2", "ls": "Amarela", "prob": "Am 8% V1 27% V2 65%", "gp": "GSF 0,67 · R$ 318"}, {"deck": "2026-05", "alvo": "2026-10", "h": 5, "real": "Verde", "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 10% Am 53% V1 28% V2 9%", "gp": "GSF 0,74 · R$ 231"}, {"deck": "2026-05", "alvo": "2026-11", "h": 6, "real": null, "esp": "Amarela", "li": "Vermelha 2", "ls": "Verde", "prob": "Vd 17% Am 58% V1 21%", "gp": "GSF 0,81 · R$ 273"}, {"deck": "2026-09", "alvo": "2026-10", "h": 1, "real": "Verde", "esp": "Verde", "li": "Amarela", "ls": "Verde", "prob": "Vd 66% Am 31%", "gp": "GSF 0,81 · R$ 86"}, {"deck": "2026-09", "alvo": "2026-11", "h": 2, "real": null, "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 80% Am 19%", "gp": "GSF 0,92 · R$ 63"}, {"deck": "2026-09", "alvo": "2026-12", "h": 3, "real": null, "esp": "Verde", "li": "Verde", "ls": "Verde", "prob": "Vd 100%", "gp": "GSF 0,98 · R$ 61"}];
+  const MES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const ORD = { "Verde": 0, "Amarela": 1, "Vermelha 1": 2, "Vermelha 2": 3 };
+  const CLS = { "Verde": "Verde", "Amarela": "Amarela", "Vermelha 1": "V1", "Vermelha 2": "V2" };
+  const AB = { "Verde": "Vd", "Amarela": "Am", "Vermelha 1": "V1", "Vermelha 2": "V2" };
+  const rotMes = c => `${MES[+c.slice(5) - 1]}/${c.slice(2, 4)}`;
+  const faixa = document.getElementById("faixa");
+  const linhas = [["Real", "real", null], ["Esperado", "esp", "igual"], ["LI (seco)", "li", "teto"], ["LS (úmido)", "ls", "piso"]];
+  function desenhar(ano) {
+    // filtra pelo ano do mês previsto: só aparecem meses do ano escolhido, vindos de qualquer deck que os previu
+    const dados = ano === "todos" ? D : D.filter(d => d.alvo.startsWith(ano));
+    const colunas = [...new Set(dados.map(d => d.alvo))].sort();
+    const grade = `128px repeat(${colunas.length}, minmax(40px, 1fr))`;
+    faixa.replaceChildren();
+    const cab = document.createElement("div"); cab.className = "meses"; cab.style.gridTemplateColumns = grade;
+    cab.innerHTML = "<span class=\"fixo\"></span>" + colunas.map(c => `<span${c.endsWith("-01") ? " class=\"ano\"" : ""}>${rotMes(c)}</span>`).join("");
+    faixa.appendChild(cab);
+    [...new Set(dados.map(d => d.deck))].forEach(dk => {
+      const bloco = document.createElement("div"); bloco.className = "deck"; bloco.style.gridTemplateColumns = grade;
+      bloco.innerHTML = `<div class="titulo"><span>Deck de ${MES[+dk.slice(5) - 1]}/${dk.slice(0, 4)}</span></div>`;
+      const porAlvo = Object.fromEntries(dados.filter(d => d.deck === dk).map(d => [d.alvo, d]));
+      linhas.forEach(([rot, k, crit]) => {
+        const l = document.createElement("div"); l.className = "lin fixo"; l.textContent = rot; bloco.appendChild(l);
+        colunas.forEach(c => {
+          const d = porAlvo[c], cel = document.createElement("div"); cel.className = "cel" + (c.endsWith("-01") ? " ano" : "");
+          const cor = d && d[k];
+          if (cor) {
+            cel.classList.add(CLS[cor]); cel.textContent = AB[cor];
+            const r = d.real;
+            if (r && ((crit === "igual" && cor !== r) || (crit === "teto" && ORD[r] > ORD[cor]) || (crit === "piso" && ORD[r] < ORD[cor]))) cel.classList.add("erro");
+            cel.title = k === "esp" ? `${rotMes(c)} · esperado ${cor} · ${d.prob} · ${d.gp}` : `${rotMes(c)} · ${rot}: ${cor}`;
+          }
+          bloco.appendChild(cel);
+        });
+      });
+      faixa.appendChild(bloco);
+    });
+    document.querySelectorAll("#anos button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ano === ano)));
+    try { localStorage.setItem("ano-faixa", ano); } catch (e) {}
+  }
+  document.querySelectorAll("#anos button").forEach(b => b.addEventListener("click", () => desenhar(b.dataset.ano)));
+  let inicial = "2026";
+  try { inicial = localStorage.getItem("ano-faixa") || "2026"; } catch (e) {}
+  desenhar(["2025", "2026", "todos"].includes(inicial) ? inicial : "2026");
+})();
+</script>

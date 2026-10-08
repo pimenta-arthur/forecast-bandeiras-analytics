@@ -332,6 +332,56 @@ def sigma_disponivel(
     return (erros.std() if len(erros) >= minimo else np.nan), len(erros)
 
 
+GRUPOS_HORIZONTE = (
+    (1, 2, 3),
+    (4, 5, 6),
+)  # σ separado para curto e longo prazo (seção 9.3)
+
+
+def grupo_horizonte(h: int) -> tuple[int, ...]:
+    """Grupo de horizontes (M+1–3 ou M+4–6) usado para estimar o σ de uma previsão em M+h."""
+    return next(g for g in GRUPOS_HORIZONTE if h in g)
+
+
+def probabilidade_por_grupo(
+    historico: pd.DataFrame, deck: pd.Period, h: int, x_medio: float, gsf_medio: float
+) -> pd.Series:
+    """Probabilidade de cada cor com σ do grupo de horizonte de h, só com erros já realizados na data do deck.
+
+    `historico` são previsões do mesmo método com a coluna erro_x (X real − X médio). Sem
+    histórico suficiente, devolve NaN em todas as cores (o método fica suspenso).
+    """
+    sigma, _ = sigma_disponivel(historico, deck, horizontes=grupo_horizonte(h))
+    if np.isnan(sigma):
+        return pd.Series(np.nan, index=list(regra.LIMITES_X) + ["Vermelha 2"])
+    return newave.probabilidade_calibrada(x_medio, sigma, gsf_medio)
+
+
+def prever_cenarios(
+    prep: dict,
+    referencias: dict,
+    k: int | None = None,
+    meia_vida: float | None = None,
+) -> pd.DataFrame:
+    """Uma previsão por cenário de ENA (ex.: esperado, LI, LS), lado a lado por mês-alvo.
+
+    `referencias` mapeia o nome do cenário -> trajetória de ENA do SIN (Series por período).
+    Colunas: deck, alvo, h e, para cada cenário, gsf_<nome>, pld_<nome>, x_<nome>, cor_<nome>.
+    Só os alvos cobertos por todas as referências.
+    """
+    tabelas = []
+    for nome, ref in referencias.items():
+        p = prever_com_referencia(prep, ref, k, meia_vida).set_index(
+            ["deck", "alvo", "h"]
+        )
+        tabelas.append(
+            p[["gsf_medio", "pld_medio", "x_medio", "cor_media"]].set_axis(
+                [f"gsf_{nome}", f"pld_{nome}", f"x_{nome}", f"cor_{nome}"], axis=1
+            )
+        )
+    return pd.concat(tabelas, axis=1, join="inner").reset_index()
+
+
 def decks_disponiveis() -> list[tuple[int, int]]:
     """(ano, mês) dos decks com as saídas necessárias em data/raw/ccee_newave."""
     raiz = load.DATA_RAW / "ccee_newave"

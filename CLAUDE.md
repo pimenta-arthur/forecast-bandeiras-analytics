@@ -26,6 +26,7 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 - `notebooks/` — `01_eda`, `02_features`, `03_modelagem`.
 - `src/forecast_bandeiras/` — `load.py` (leitura de `sumario.rv0` e patamares), `regra.py` (GH_band, GSF e cor pelo ábaco), `features.py` (balanço e base mensal), `graficos.py` (figuras da EDA), `newave.py` (séries do NEWAVE, PLD gatilho por série e escolha de séries pela ENA), `backtest.py` (backtest sem vazamento com os decks), `models.py`. Fonte do DECOMP: `relato.rv0` (tudo) e `renovaveis.csv` (só para separar eólica e solar a partir de out/2025); `sumario.rv0` não é mais usado. Base histórica: `data/processed/base_mensal.parquet` (jan/2023–out/2026).
 - `reports/figures/` — gráficos em PNG.
+- `reports/pagina/` — página de avaliação e metodologia para a equipe de macro (`index.html`, `metodologia.html`, `estilo.css`), publicada como artifact (https://claude.ai/artifact/4hmDrk4y8dhabzzFBLB9mz). Os dados da faixa de bandeiras vêm de `dados_faixa.json`, gerado pelo notebook `03c_cenarios_li_ls`; ao atualizar, colar o JSON na constante `D` do `index.html` e republicar.
 - `docs/metodologia.md` — raciocínio, registro de decisões e questões em aberto.
 
 ## Convenções
