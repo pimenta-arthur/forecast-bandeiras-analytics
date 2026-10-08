@@ -380,6 +380,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D025 | 2026-10-06 | **Saída principal: probabilidade de cada cor por mês** (ex.: "ago: 70% amarela, 25% vermelha 1, 5% verde"), calculada sobre os cenários (ENA do ECMWF × cenários do NEWAVE, com GSF e preço de cada cenário). Os cenários LI / esperado / LS do GSF e do preço continuam como apoio | Incorpora juntas a incerteza do GSF e do preço; mais útil para o usuário do que uma cor única | Decidido |
 | D026 | 2026-10-06 | Configuração de trabalho do teste do NEWAVE: **GSF** com os 10 cenários de ENA do SIN mais próxima no mês; **preço** com os 25 cenários de trajetória de ENA do SIN mais próxima (mais peso nos meses recentes), PLD de cada cenário pela fórmula do gatilho (4 submercados). **Sem** termo de armazenamento futuro: na data da previsão só se conhece o armazenamento atual (já embutido no deck); o armazenamento futuro entra implicitamente pela trajetória de ENA de cada série | Melhor configuração realizável no estresse (seção 8.4); a seção 8.5 usa o armazenamento futuro real (gabarito) e é limite superior | Proposta (revalidar com mais decks e com o ECMWF) |
 | D027 | 2026-10-06 | Probabilidade de cada cor pelo **erro histórico da média**: X médio das 25 séries como referência e X real ~ Normal(X médio, σ do erro histórico); cor exibida = cor da média | Melhor Brier (0,235 × 0,33) e maior probabilidade da cor real (76% × 66–69%) nos 3 decks; sem a circularidade de pesar séries pela distância à média (seção 8.7) | **Suspensa: vazamento de dados** — o σ foi estimado com erros de meses posteriores à data do deck. Refazer com σ estimado só com previsões já realizadas na data (decks de anos anteriores) |
+| D028 | 2026-10-07 | Horizonte de avaliação do backtest: **M+1 a M+7** | 7 meses é o alcance da previsão sazonal do ECMWF que vai alimentar a ENA de referência | Decidido |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -674,3 +675,38 @@ média é amarela. Métodos testados (método mesma série; ENA real como refer�
 > legítimo em 2026 para estimar o σ**: ele precisa vir de decks de anos anteriores, com janela que avança no tempo e,
 > idealmente, por horizonte (M+1 … M+6). Os números de Brier e de probabilidade da cor real do método 5 são otimistas e não
 > valem como desempenho fora da amostra. A cor pela média (sem σ) não é afetada.
+
+### 8.8 Backtest sem vazamento — 14 decks (fev/2025 a set/2026), h = 1 a 7
+
+`src/forecast_bandeiras/backtest.py`, `notebooks/02f_backtest_sem_vazamento.ipynb`, resultados em
+`data/processed/backtest_newave.parquet`, matriz em `reports/figures/backtest_sem_vazamento/10_matriz_backtest.png`.
+
+- **Fora da amostra:** ANDE (+ consumo interno de Itaipu), PCH e carga por submercado do mês-alvo vêm do deck
+  (`c_adic.dat`, `sistema.dat`); GF_band, fatores de perda e PLD mín/máx são os do mês do deck; σ usa só erros de alvos
+  anteriores ao mês do deck (mínimo de 8; disponível a partir do deck de ago/2025).
+- **Dentro da amostra:** k = 25 séries e meia-vida de 2 meses (escolhidos olhando 2026).
+- **Oráculo:** ENA de referência = ENA real (até entrar o ECMWF).
+
+| h | Previsões | Acerto da cor (média das séries) | Persistência (cor do mês do deck) | Mesmo mês do ano anterior | Erro médio GSF | Erro médio PLD (R$) | Prob. média da cor real (n) | Brier |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 14 | 71% | 57% | 50% | 0,033 | 92 | 73% (9) | 0,32 |
+| 2 | 13 | 69% | 31% | 46% | 0,050 | 87 | 76% (8) | 0,30 |
+| 3 | 13 | 62% | 15% | 31% | 0,040 | 65 | 72% (8) | 0,31 |
+| 4 | 13 | 77% | 15% | 23% | 0,035 | 56 | 79% (8) | 0,23 |
+| 5 | 13 | 62% | 15% | 23% | 0,046 | 43 | 73% (8) | 0,31 |
+| 6 | 12 | 67% | 17% | 17% | 0,039 | 48 | 72% (7) | 0,34 |
+| 7 | 11 | 91% | 27% | 18% | 0,037 | 64 | 82% (6) | 0,11 |
+| **Total** | **89** | **71%** | **26%** | **30%** | **0,040** | **66** | **75% (54)** | **0,28** |
+
+- A cor da média supera com folga as referências ingênuas em todos os horizontes, e o acerto não cai com o horizonte
+  (71% em média de h = 1 a 7; h = 7 com só 11 previsões) — com ENA oráculo; com o ECMWF deve cair.
+- **Os erros se concentram na transição úmido → seco:** de 26 erros, 9 em maio e 6 em junho. Nos erros, o GSF previsto
+  fica +0,033 acima do real e o PLD R$ 43 abaixo: o método prevê bandeira **mais barata** que a real. Maio/2026 foi previsto
+  verde por todos os decks de nov/2025 a abr/2026 (com 68–89% de probabilidade) e foi amarela; maio/2025 também errou.
+- **Matriz com a distribuição completa** (`10b_matriz_backtest_distribuicao.png`): dos 12 erros com probabilidade
+  disponível, 5 deram ≥ 30% à cor real (ex.: deck de ago/2025 → nov/2025: Am 54% · V1 46%, foi V1; decks de mar e abr/2026
+  → set/2026: Vd 52–55% · Am 45–48%, foi Am) e só 2 deram < 10% (mai/2026 pelo deck de nov/2025: Vd 90% · Am 10%; jun/2026
+  pelo deck de mai/2026: V1 56% · V2 41% · Am 2%). Probabilidade média da cor prevista: 89% nos acertos e 69% nos erros —
+  a probabilidade separa bem as previsões seguras das duvidosas.
+- Candidato natural (sem vazamento): **correção de viés por mês do ano**, estimada só com erros de anos anteriores
+  (ex.: o erro de maio/2025 corrige as previsões de maio/2026).

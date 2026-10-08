@@ -7,6 +7,7 @@ Paleta categórica de referência em ordem fixa (a cor segue a série, nunca a p
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from forecast_bandeiras.load import RAIZ
@@ -655,5 +656,93 @@ def faixa_bandeiras(tabelas: dict, titulo: str, nome: str) -> Path:
             lado.set_visible(False)
         ax.set_title(rotulo, loc="left", color=TEXTO, fontsize=11, fontweight="bold")
     fig.suptitle(titulo, x=0.01, ha="left", color=TEXTO, fontsize=12, fontweight="bold")
+    fig.tight_layout()
+    return _salvar(fig, nome)
+
+
+def matriz_backtest(
+    previsoes: pd.DataFrame, titulo: str, nome: str, distribuicao: bool = False
+) -> Path:
+    """Matriz deck × mês-alvo com a cor prevista (cor da média), a probabilidade dessa cor e a cor real.
+
+    `previsoes` precisa das colunas deck, alvo (Period), cor_media, cor_oficial e, opcionalmente,
+    p_cor_prevista (probabilidade da cor prevista; vazia quando ainda não há histórico para o σ).
+    Com `distribuicao=True`, cada célula mostra a probabilidade de todas as cores (≥ 5%), usando as
+    colunas p_Verde, p_Amarela, p_Vermelha 1 e p_Vermelha 2.
+    """
+    alvos = sorted(previsoes.alvo.unique())
+    decks = sorted(previsoes.deck.unique())
+    abrev = {"Verde": "Vd", "Amarela": "Am", "Vermelha 1": "V1", "Vermelha 2": "V2"}
+    real = previsoes.drop_duplicates("alvo").set_index("alvo").cor_oficial
+    fig, ax = plt.subplots(
+        figsize=(
+            (1.05 if distribuicao else 0.82) * len(alvos) + 2,
+            (0.75 if distribuicao else 0.5) * (len(decks) + 1) + 1.4,
+        ),
+        facecolor=SUPERFICIE,
+    )
+    ax.set_facecolor(SUPERFICIE)
+    linhas = [("Real", None)] + [
+        (f"Deck {MESES[d.month - 1]}/{d.year % 100:02d}", d) for d in decks
+    ]
+    for i, (rotulo, deck) in enumerate(linhas):
+        for j, alvo in enumerate(alvos):
+            if deck is None:
+                cor, txt, ok = real[alvo], abrev[real[alvo]], True
+            else:
+                r = previsoes[(previsoes.deck == deck) & (previsoes.alvo == alvo)]
+                if r.empty:
+                    continue
+                r = r.iloc[0]
+                cor, ok = r.cor_media, r.cor_media == r.cor_oficial
+                p = r.get("p_cor_prevista", np.nan)
+                if distribuicao and not pd.isna(p):
+                    itens = [
+                        f"{abrev[c]} {r[f'p_{c}']:.0%}"
+                        for c in abrev
+                        if r.get(f"p_{c}", 0) >= 0.05
+                    ]
+                    txt = (
+                        abrev[cor]
+                        + ("" if ok else " ✗")
+                        + "\n"
+                        + "\n".join(
+                            " ".join(itens[i : i + 2]) for i in range(0, len(itens), 2)
+                        )
+                    )
+                else:
+                    txt = (
+                        abrev[cor]
+                        + ("" if pd.isna(p) else f" {p:.0%}")
+                        + ("" if ok else " ✗")
+                    )
+            ax.add_patch(
+                plt.Rectangle(
+                    (j, -i), 0.94, 0.86, color=CORES_BANDEIRA[cor], linewidth=0
+                )
+            )
+            claro = cor in ("Vermelha 2", "Verde", "Vermelha 1")
+            ax.text(
+                j + 0.47,
+                -i + 0.43,
+                txt,
+                ha="center",
+                va="center",
+                fontsize=6.0 if distribuicao else 6.8,
+                color="#ffffff" if claro else TEXTO,
+                fontweight="bold" if not ok else "normal",
+            )
+    ax.set_xlim(-0.05, len(alvos))
+    ax.set_ylim(-len(linhas) + 0.9, 0.95)
+    ax.set_xticks(
+        [j + 0.47 for j in range(len(alvos))],
+        [f"{MESES[a.month - 1]}/{a.year % 100:02d}" for a in alvos],
+        rotation=90,
+    )
+    ax.set_yticks([-i + 0.43 for i in range(len(linhas))], [l[0] for l in linhas])
+    ax.tick_params(colors=TEXTO_SEC, labelsize=8, length=0)
+    for lado in ax.spines.values():
+        lado.set_visible(False)
+    ax.set_title(titulo, loc="left", color=TEXTO, fontsize=11, fontweight="bold")
     fig.tight_layout()
     return _salvar(fig, nome)
