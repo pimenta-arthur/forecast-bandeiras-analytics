@@ -207,6 +207,93 @@ def prever_com_parametros(
     return pd.DataFrame(linhas)
 
 
+def _escolher(
+    prep: dict, referencia: pd.Series, alvo: pd.Period, k: int, meia_vida: float
+) -> pd.Index:
+    """k séries de trajetória de ENA (do mês do deck ao alvo) mais próxima da referência."""
+    trajetoria = [prep["inicio"] + i for i in range((alvo - prep["inicio"]).n + 1)]
+    ref = pd.Series(referencia.reindex(trajetoria).to_numpy(), index=trajetoria)
+    return (
+        distancia_trajetoria(prep["ena"][trajetoria], ref, meia_vida).nsmallest(k).index
+    )
+
+
+def prever_com_referencia(
+    prep: dict,
+    referencia: pd.Series,
+    k: int | None = None,
+    meia_vida: float | None = None,
+) -> pd.DataFrame:
+    """Como `prever_com_parametros`, mas com uma trajetória de ENA de referência dada
+    (ex.: média do ECMWF, climatologia). Só os meses-alvo cobertos pela referência."""
+    k = K_PADRAO if k is None else k
+    meia_vida = MEIA_VIDA_PADRAO if meia_vida is None else meia_vida
+    linhas = []
+    for alvo in prep["alvos"]:
+        if alvo not in referencia.index:
+            continue
+        idx = _escolher(prep, referencia, alvo, k, meia_vida)
+        gsf_medio = round(prep["gsf"].loc[idx, alvo].mean(), 2)
+        pld_medio = float(prep["pld"].loc[idx, alvo].mean())
+        linhas.append(
+            {
+                "deck": prep["inicio"],
+                "alvo": alvo,
+                "h": (alvo - prep["inicio"]).n,
+                "gsf_medio": gsf_medio,
+                "pld_medio": pld_medio,
+                "x_medio": pld_medio * max(0.0, 1 - gsf_medio),
+                "cor_media": regra.cor_bandeira(gsf_medio, pld_medio),
+            }
+        )
+    return pd.DataFrame(linhas)
+
+
+def prever_com_membros(
+    prep: dict,
+    membros: pd.DataFrame,
+    k: int | None = None,
+    meia_vida: float | None = None,
+) -> pd.DataFrame:
+    """Estratégia B: cada membro (linha de `membros`, trajetória de ENA do SIN) escolhe suas k séries.
+
+    Cor exibida = cor da média de todas as séries escolhidas (todos os membros juntos);
+    probabilidade de cada cor = fração dos membros cuja média (GSF, PLD) cai em cada cor.
+    """
+    k = K_PADRAO if k is None else k
+    meia_vida = MEIA_VIDA_PADRAO if meia_vida is None else meia_vida
+    linhas = []
+    for alvo in prep["alvos"]:
+        if alvo not in membros.columns:
+            continue
+        gsfs, plds, cores = [], [], []
+        for _, ref in membros.iterrows():
+            idx = _escolher(prep, ref, alvo, k, meia_vida)
+            g = round(prep["gsf"].loc[idx, alvo].mean(), 2)
+            p = float(prep["pld"].loc[idx, alvo].mean())
+            gsfs.append(g)
+            plds.append(p)
+            cores.append(regra.cor_bandeira(g, p))
+        gsf_medio, pld_medio = round(float(np.mean(gsfs)), 2), float(np.mean(plds))
+        prob = pd.Series(cores).value_counts(normalize=True)
+        linhas.append(
+            {
+                "deck": prep["inicio"],
+                "alvo": alvo,
+                "h": (alvo - prep["inicio"]).n,
+                "gsf_medio": gsf_medio,
+                "pld_medio": pld_medio,
+                "x_medio": pld_medio * max(0.0, 1 - gsf_medio),
+                "cor_media": regra.cor_bandeira(gsf_medio, pld_medio),
+                **{
+                    f"p_{c}": float(prob.get(c, 0.0))
+                    for c in ("Verde", "Amarela", "Vermelha 1", "Vermelha 2")
+                },
+            }
+        )
+    return pd.DataFrame(linhas)
+
+
 def prever_deck(
     ano: int,
     mes: int,
@@ -227,24 +314,27 @@ def prever_deck(
 
 
 def sigma_disponivel(
-    previsoes: pd.DataFrame, deck: pd.Period, minimo: int = 8
+    previsoes: pd.DataFrame, deck: pd.Period, minimo: int = 8, horizontes=None
 ) -> tuple[float, int]:
     """σ do erro de X com previsões cujo mês-alvo terminou antes do mês do deck (sem vazamento).
 
-    Usa só meses não úmidos (GSF médio < 0,96). Retorna (σ, n); σ = NaN se n < `minimo`.
+    Usa só meses não úmidos (GSF médio < 0,96) e, se `horizontes` for dado, só previsões
+    desses horizontes (h). Retorna (σ, n); σ = NaN se n < `minimo`.
     """
     ok = (
         (previsoes.alvo < deck)
         & (previsoes.gsf_medio < 0.96)
         & previsoes.erro_x.notna()
     )
+    if horizontes is not None:
+        ok &= previsoes.h.isin(list(horizontes))
     erros = previsoes.loc[ok, "erro_x"]
     return (erros.std() if len(erros) >= minimo else np.nan), len(erros)
 
 
 def decks_disponiveis() -> list[tuple[int, int]]:
-    """(ano, mês) dos decks com as saídas necessárias em data/raw/ons_newave."""
-    raiz = load.DATA_RAW / "ons_newave"
+    """(ano, mês) dos decks com as saídas necessárias em data/raw/ccee_newave."""
+    raiz = load.DATA_RAW / "ccee_newave"
     saida = []
     for pasta in sorted(raiz.glob("*/*_*")):
         if all(

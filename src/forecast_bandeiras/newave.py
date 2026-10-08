@@ -20,7 +20,7 @@ SUBS = {"SE": 1, "S": 2, "NE": 3, "N": 4}
 
 def caminho_deck(ano: int, mes: int) -> Path:
     """Pasta com as saídas do NEWAVE do deck de um mês."""
-    return load.DATA_RAW / "ons_newave" / str(ano) / f"{ano}_{mes:02d}"
+    return load.DATA_RAW / "ccee_newave" / str(ano) / f"{ano}_{mes:02d}"
 
 
 def ler_nwlistop(caminho: Path, somar_patamares: bool = True) -> pd.DataFrame:

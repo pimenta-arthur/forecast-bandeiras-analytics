@@ -602,3 +602,52 @@ def ler_dcide(ano: int, mes: int) -> pd.Series:
     caminho = next((DATA_RAW / "dcide").glob(f"dcide_*_{ano}{mes:02d}.csv"))
     df = pd.read_csv(caminho, decimal=",", parse_dates=["suprimento"])
     return df.set_index("suprimento")["PLD_SE_CONV"].astype(float).rename("pld_dcide")
+
+
+# ---------------------------------------------------------------------------
+# Previsão sazonal de ENA do ECMWF (SEAS5), por subsistema
+# ---------------------------------------------------------------------------
+
+SUBSISTEMAS_ECMWF = {"Sudeste": "SE", "Sul": "S", "Nordeste": "NE", "Norte": "N"}
+
+
+def _ler_arquivo_ecmwf(caminho: Path) -> pd.DataFrame:
+    """Lê um arquivo ENA_MLT_SUBSISTEMA_MENSAL_*: alvo, subsistema, ena (MWmed), mlt, pct_mlt."""
+    df = pd.read_csv(caminho, sep=r"\s{2,}", engine="python")
+    df.columns = ["alvo", "subsistema", "ena", "mlt", "pct_mlt"]
+    df["alvo"] = pd.PeriodIndex(df.alvo.str.strip(), freq="M")
+    df["subsistema"] = df.subsistema.str.strip().map(SUBSISTEMAS_ECMWF)
+    return df
+
+
+def ler_ecmwf_estatisticas() -> pd.DataFrame:
+    """Média (`av`) e percentis do ECMWF nas abordagens `precip` e `vaz`, todas as rodadas.
+
+    Arquivos em data/raw/ecmwf_ena/ECENSLT_estat/ECENSLT<estat>_<abordagem>/.
+    Colunas: emissao (Period do mês de emissão), estatistica (av, p10 … p90), abordagem,
+    alvo, subsistema, ena, mlt, pct_mlt.
+    """
+    partes = []
+    for pasta in sorted((DATA_RAW / "ecmwf_ena" / "ECENSLT_estat").glob("ECENSLT*_*")):
+        estatistica, abordagem = pasta.name.removeprefix("ECENSLT").split("_", 1)
+        for arq in sorted(pasta.glob("*.txt")):
+            df = _ler_arquivo_ecmwf(arq)
+            df["emissao"] = pd.Period(arq.stem.rsplit("_", 1)[1][:6], "M")
+            df["estatistica"], df["abordagem"] = estatistica, abordagem
+            partes.append(df)
+    return pd.concat(partes, ignore_index=True)
+
+
+def ler_ecmwf_membros() -> pd.DataFrame:
+    """Os 51 membros do ECMWF (m00 a m50), todas as rodadas.
+
+    Arquivos em data/raw/ecmwf_ena/ECENSLTm/<AAAA-MM>/. Colunas: emissao, membro (0–50),
+    alvo, subsistema, ena, mlt, pct_mlt.
+    """
+    partes = []
+    for arq in sorted((DATA_RAW / "ecmwf_ena" / "ECENSLTm").glob("*/*.txt")):
+        df = _ler_arquivo_ecmwf(arq)
+        df["emissao"] = pd.Period(arq.stem.rsplit("_", 1)[1][:6], "M")
+        df["membro"] = int(re.search(r"ECENSLTm(\d+)_", arq.name).group(1))
+        partes.append(df)
+    return pd.concat(partes, ignore_index=True)

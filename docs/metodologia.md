@@ -382,6 +382,8 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D027 | 2026-10-06 | Probabilidade de cada cor pelo **erro histórico da média**: X médio das 25 séries como referência e X real ~ Normal(X médio, σ do erro histórico); cor exibida = cor da média | Melhor Brier (0,235 × 0,33) e maior probabilidade da cor real (76% × 66–69%) nos 3 decks; sem a circularidade de pesar séries pela distância à média (seção 8.7) | **Suspensa: vazamento de dados** — o σ foi estimado com erros de meses posteriores à data do deck. Refazer com σ estimado só com previsões já realizadas na data (decks de anos anteriores) |
 | D028 | 2026-10-07 | Horizonte de avaliação do backtest: **M+1 a M+7** | 7 meses é o alcance da previsão sazonal do ECMWF que vai alimentar a ENA de referência | Decidido |
 | D029 | 2026-10-07 | Escolha das séries: **k = 15** e **peso igual em toda a trajetória de ENA** (substitui k = 25 e meia-vida 2 da D026). Padrão em `backtest.K_PADRAO` e `backtest.MEIA_VIDA_PADRAO` | Escolhidos só com os alvos de 2025 e confirmados em 2026 (seções 8.9 e 8.10); robusto ao incluir 2026 | Decidido |
+| D030 | 2026-10-07 | ENA prevista do ECMWF: **centro = média da abordagem `precip`**; **incerteza = 51 membros recentrados na média `precip`** (dispersão da abordagem `vaz`). Percentis `precip` e média `vaz` descartados | Avaliação da seção 9.1: média `precip` com erro de 8–13% em todos os leads; membros recentrados com faixa calibrada | Proposta (testar no backtest) |
+| D031 | 2026-10-07 | Pareamento ECMWF × deck: o deck do mês M usa a **rodada do ECMWF do mesmo mês M** (o deck pode ser segurado até a rodada sair, ~dia 5). Para o próprio mês M, a ENA de referência é a do PMO (`ena.pdf`, já publicada); de M+1 em diante, a do ECMWF. Com isso o horizonte coberto pelo ECMWF é **M+1 a M+6** | Simplifica os testes e é operacionalmente viável; nenhuma informação posterior à data da previsão (~dia 5 de M) | Decidido |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -406,6 +408,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 - **Q20 — Viés do preço na transição úmido → seco:** o custo marginal do NEWAVE fica muito abaixo do PLD gatilho em fev–mai. Causa (armazenamento inicial baixo? CVaR? DECOMP × NEWAVE)? O casamento pelo armazenamento (8.5) reduz o viés, mas fev–mar seguem abaixo do oficial; testar correção de viés por mês e a curva Dcide.
 - **Q21 — Viés do armazenamento das séries do NEWAVE:** o armazenamento real do SE ficou abaixo de ~90% das séries do deck de jan/2026. Se for sistemático (com mais decks), estimar e corrigir na escolha das séries do preço.
 - **Q22 — Backtest sem vazamento (auditoria):** (1) σ da probabilidade só com erros já realizados na data do deck (decks de 2023–2025); (2) ANDE, PCH e pesos de carga do mês-alvo devem vir do deck do NEWAVE da data, não do PMO do próprio mês; (3) k = 25, k = 10 e meia-vida de 2 meses foram escolhidos em 2026 e precisam ser validados em outros anos; (4) a ENA de referência é a real (oráculo) até entrar o ECMWF.
+- ~~**Q23 — Data de disponibilidade do ECMWF:**~~ Resolvida pela D031 (deck M com a rodada de M). as rodadas são datadas no dia 1 do mês, mas o SEAS5 costuma ser liberado por volta do dia 5. O deck do mês M sai no fim de M−1. Qual rodada estava disponível na data de cada deck? Se for a de M−1, o horizonte coberto a partir do deck vai até M+5, não M+7.
 - **Q14 — ENA não vira geração hidráulica diretamente:** a hidráulica do DECOMP é, em grande parte, a carga menos eólica, solar e térmica; a ENA entra pelo despacho térmico e pelo armazenamento. A conversão ENA → GH precisa incluir carga e renováveis (ex.: regressão de GH_band em carga líquida, ENA % MLT e EAR).
 - **Q11 — Definição do horizonte:** a cor de M é decidida por volta do dia 25 de M−1. Em 04/10/2026, outubro já é conhecido, então M+1 = novembro. Fixar a data de corte de cada previsão no backtest.
 
@@ -429,7 +432,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | GFOM (despacho fora da ordem de mérito) | ONS/CCEE | Pendente |
 | PLD gatilho histórico | Boletins InfoBandeira (CCEE) | A extrair dos PDFs |
 | Memória de cálculo mensal da bandeira (PDF), em `data/raw/ccee_calculo_bandeira/<ano>/` | CCEE | 2026: jan–out completos; 2019–2025 a trazer (Q12) |
-| Saídas do NEWAVE por série (`nwlistop`: `ghtot*`, `eafb*`, `cmarg001–004`), em `data/raw/ons_newave/<ano>/<ano>_<mes>/` | CCEE (deck de preços) | Jan e fev/2026 |
+| Saídas do NEWAVE por série (`nwlistop`: `ghtot*`, `eafb*`, `cmarg001–004`), em `data/raw/ccee_newave/<ano>/<ano>_<mes>/` | CCEE (deck de preços) | Jan e fev/2026 |
 | Previsão sazonal de ENA (% MLT) | ECMWF SEAS5 | A verificar (incluindo hindcasts) |
 | Curva forward de PLD | Dcide | A verificar (histórico de curvas) |
 
@@ -507,7 +510,7 @@ Base: `data/processed/base_mensal.parquet`. Gráficos em `reports/figures/03–0
 
 ### 8.3 Primeiro teste com o NEWAVE (decks de jan e fev/2026)
 
-Arquivos em `data/raw/ons_newave/2026/2026_01` e `2026_02` (saídas do `nwlistop`, 2.000 séries × 5 anos, 2026–2030):
+Arquivos em `data/raw/ccee_newave/2026/2026_01` e `2026_02` (saídas do `nwlistop`, 2.000 séries × 5 anos, 2026–2030):
 `ghtotsin` e `ghtotm001–004` (geração hidráulica total, por patamar, MWmês), `eafbsin` e `eafbm001–004` (energia afluente
 bruta), `cmarg001` e `cmarg001-med` (custo marginal do SE). Os arquivos são por **ano civil** (colunas jan–dez): no deck de
 fevereiro, janeiro vem zerado porque é anterior ao início do estudo. O cabeçalho ("PLD - JANEIRO - 2026 - Niveis para 27/12")
@@ -762,3 +765,132 @@ mês-alvo), 0,5, 1, 2 (atual), 4, ∞ (peso igual na trajetória toda)}.
   seca de 2025 e a recuperação do 2º semestre de 2026.
 - Por horizonte, o ganho aparece de h = 3 em diante (h = 5: 62% → 85%; h = 6: 67% → 83%); h = 1 e 2 não mudam.
 - A transição úmido → seco continua sendo o ponto fraco (maio/2026 segue verde em todos os decks).
+
+## 9. ENA prevista: ECMWF (SEAS5)
+
+### 9.1 Avaliação do ECMWF sozinho (`notebooks/03a_ecmwf_avaliacao.ipynb`)
+
+Dados em `data/raw/ecmwf_ena/` (`load.ler_ecmwf_estatisticas`, `load.ler_ecmwf_membros`): 22 rodadas mensais (jan/2025 a
+out/2026), datadas no dia 1 do mês de emissão, cada uma cobrindo o mês de emissão (lead 0) e os 6 seguintes (a média e os
+percentis `vaz` vão até o lead 5). Por subsistema: ENA (MWmed), MLT e % MLT. Duas abordagens: `precip` (estatística da chuva
+→ ENA) e `vaz` (estatística da vazão); média (`av`), percentis (P10 … P90) e 51 membros (os membros são da abordagem `vaz`).
+MLT do ECMWF ≈ MLT do ONS (diferença média 0,5%). Verdade: ENA mensal do `ena.pdf` do PMO.
+
+| Erro da ENA do SIN (% da ENA do PMO) | lead 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| **ECMWF média precip** | **8** | **10** | **9** | **10** | **10** | **12** | **13** |
+| ECMWF média vaz | 8 | 15 | 23 | 25 | 26 | 27 | — |
+| ECMWF média dos 51 membros (vaz) | 8 | 14 | 22 | 25 | 26 | 25 | 24 |
+| Persistência (% MLT do mês anterior) | 9 | 14 | 19 | 21 | 20 | 21 | 21 |
+| Climatologia (100% MLT) | 27 | 28 | 30 | 29 | 27 | 26 | 25 |
+
+- **Média `precip`: melhor previsão central** em todos os leads, com viés pequeno (−1% a −7%).
+- **Abordagem `vaz` úmida demais** (viés de +8% a +22%). A climatologia tem viés de +18 a +24% porque 2025–2026 foram secos.
+- **Percentis `precip` não servem como faixa:** largos e assimétricos (ex.: SE, mar/2026: P10 = 30% e P90 = 296% da MLT).
+- **Membros recentrados** (cada membro × média `precip` / média dos membros, por rodada, mês-alvo e subsistema; só produtos
+  da própria rodada, sem dado realizado): faixa calibrada para a ENA do SIN — 82% dentro de P10–P90 (ideal 80%), 52% dentro
+  de P25–P75 (ideal 50%), 5% abaixo do P10 e 13% acima do P90. Membros originais: 62% e 35%, com 38% abaixo do P10.
+
+### 9.2 Backtest com a ENA do ECMWF — primeiro resultado sem oráculo (`notebooks/03b_backtest_ecmwf.ipynb`)
+
+Módulo `src/forecast_bandeiras/ecmwf.py` (trajetórias de referência) e `backtest.prever_com_referencia` /
+`backtest.prever_com_membros`. Decks com rodada do ECMWF: jan/2025 a set/2026 (16); M+1 a M+6; mesmas 89 previsões em todas
+as variantes; k = 15, peso igual (D029); pareamento D031. Resultados em `data/processed/backtest_ecmwf.pkl`, matrizes em
+`reports/figures/ecmwf/12a_*` e `12b_*`.
+
+| Variante | Acerto da cor | Erro GSF | Erro PLD (R$) | Prob. média da cor real | Brier |
+|---|---|---|---|---|---|
+| Oráculo (ENA real; teto) | 72% | 0,039 | 66 | 71% | 0,33 |
+| **A: ECMWF média `precip`** | **57%** | 0,045 | 88 | 55% | 0,55 |
+| B: ECMWF 51 membros recentrados | 54% | 0,044 | 88 | 54% | 0,56 |
+| Climatologia (100% MLT; piso) | 38% | 0,063 | 153 | 53% | 0,62 |
+
+| Acerto por horizonte | M+1 | M+2 | M+3 | M+4 | M+5 | M+6 |
+|---|---|---|---|---|---|---|
+| Oráculo | 69% | 67% | 73% | 67% | 80% | 79% |
+| A: ECMWF média | 75% | 67% | 73% | 40% | 53% | 31% |
+| B: ECMWF membros | 69% | 73% | 60% | 40% | 47% | 31% |
+| Climatologia | 62% | 47% | 40% | 27% | 27% | 23% |
+
+- **Até M+3 o ECMWF entrega praticamente o mesmo que o oráculo**; de M+4 em diante cai para 31–53%, ainda acima da
+  climatologia (23–27%). A e B empatam; B não acrescenta acerto.
+- **Os erros longos vêm da hidrologia, via preço:** no 2º semestre de 2026 o ECMWF previu seco (ago/26: 28 mil MWmed × 42 mil
+  reais; o Sul teve 150–200% da MLT) → séries com PLD de R$ 250–350 (real R$ 130–170) → vermelhas que não ocorreram. No início
+  de 2025, o contrário (úmido demais → verde/amarela onde foi vermelha). Nos erros de M+4 a M+6, o GSF errou pouco (−0,002 em
+  média); o PLD, +R$ 25 em média e até +R$ 220.
+- **A probabilidade ficou confiante demais nos horizontes longos:** o σ é único para todos os horizontes e vem de erros
+  majoritariamente de horizontes curtos (ex.: deck de mai/26 → ago/26: V2 92%; real: amarela). Brier 0,55 × 0,33 do oráculo.
+
+### 9.3 σ por horizonte (variante A: ECMWF média)
+
+Pergunta: o σ único (todos os horizontes juntos) deixa a probabilidade confiante demais em M+4 a M+6? Teste: σ estimado só
+com erros de alvos já realizados antes do deck (regra do backtest), em quatro formas — único; por grupo (M+1–3 / M+4–6); por
+horizonte (com recuo para o grupo e para o único se houver menos de 8 erros); e crescente com h (único × erro médio de h /
+erro médio geral). O acerto não muda (a cor exibida é sempre a da média); muda só a distribuição.
+
+| σ | Brier (todos) | Brier M+1–3 | Brier M+4–6 | Confiança M+4–6 | Acerto M+4–6 | Prob. da cor real (todos) |
+|---|---|---|---|---|---|---|
+| Único (σ ≈ 21) | 0,54 | 0,38 | 0,72 | 69% | 40% | 55% |
+| **Por grupo (σ ≈ 15–16 curto; ≈ 25 longo)** | **0,52** | 0,38 | **0,68** | 65% | 40% | **57%** |
+| Por horizonte | 0,52 | 0,38 | 0,68 | 65% | 40% | 57% |
+| Crescente com h | 0,53 | 0,38 | 0,69 | 66% | 40% | 56% |
+
+- Separar por grupo melhora um pouco (Brier 0,54 → 0,52; no longo 0,72 → 0,68). Por horizonte não acrescenta nada ao grupo.
+- Trocar o desvio padrão pela raiz do erro quadrático médio (que inclui o viés) dá praticamente o mesmo resultado.
+- No oráculo nada muda (Brier 0,33–0,34): sem erro de hidrologia, o erro de X quase não cresce com o horizonte.
+- **O problema continua:** em M+4 a M+6 a confiança média na cor exibida é 65% e o acerto é 40%. O σ que o passado mostra
+  (≈ 25) é menor que o erro que aparece depois (desvio de X em M+4–6 no período todo ≈ 37): os erros longos grandes (2º sem/2026)
+  ainda não tinham acontecido quando os primeiros decks foram avaliados. Com poucos decks, o σ do passado subestima o futuro.
+
+### 9.4 Erros de M+4 a M+6: GSF ou preço? (variante A: ECMWF média)
+
+Contrafactual em cada previsão errada: troca só o GSF pelo real (mantém o preço previsto) e, separadamente, só o PLD pelo
+real. É um diagnóstico com valores realizados (oráculo parcial), não um método de previsão.
+
+| Horizonte | Acerto | Acerto com GSF real | Acerto com PLD real | \|erro GSF\| (oráculo) | \|erro PLD\| R$ (oráculo) |
+|---|---|---|---|---|---|
+| M+1–3 | 72% | 72% | 91% | 0,038 (0,039) | 83 (81) |
+| M+4–6 | 42% | 49% | **86%** | 0,053 (0,040) | 94 (53) |
+
+- Dos 25 erros de cor em M+4–6: 14 se resolvem só com o preço real; 2 só com o GSF real; 5 com qualquer um dos dois;
+  4 só com os dois juntos.
+- **O GSF piora pouco com o ECMWF** (0,040 → 0,053 em M+4–6), e o erro dele quase não muda a cor. **O preço dobra**
+  (R$ 53 → 94): é ele que derruba o acerto. Na conta do erro de X (aproximação de 1ª ordem), a parte do preço é R$ 21 e a
+  do GSF, R$ 12, em média, em M+4–6.
+- A mesma hidrologia errada mexe nos dois ao mesmo tempo (série seca: GSF baixo e preço alto), mas o preço é muito mais
+  sensível a ela. Ex.: deck de mar/26 → ago/26: ENA ECMWF 29 mil × real 42 mil; GSF 0,62 × 0,72; PLD R$ 272 × 129.
+- Caso diferente, no deck de jan/25: o PLD real de mar–jul/25 (R$ 208–310) ficou **acima do P90 das 2.000 séries** do
+  deck (≈ R$ 75–160). Nenhuma escolha de séries chegaria lá; o erro é do deck, não do ECMWF.
+- Figuras: `reports/figures/ecmwf/trajetorias/13_trajetorias_deck_<ano>_<mes>.png` (decks jan/25, mai/25, mar/26, mai/26).
+- Comparação com a Dcide (só decks de jan e fev/2026, os únicos com curva; 12 previsões, amostra muito pequena). Cor da Dcide
+  = preço da Dcide (PLD SE) com o GSF médio das mesmas séries. Acerto: séries 8/12, Dcide 8/12. Erro médio do PLD: séries
+  R$ 113 (viés −42), Dcide R$ 104 (viés +70). A Dcide acerta mai/26 (M+4, deck jan), onde as séries erram por preço baixo,
+  e erra jun/26 (M+4, deck fev) por preço alto; em jul–ago/26 as duas erram (vermelha × amarela). A curva da Dcide é quase
+  plana (R$ 365 em todo o 2º semestre no deck de fev) e não acompanhou a queda do PLD real para R$ 130–170.
+  Figuras: `reports/figures/ecmwf/trajetorias_dcide/14_trajetorias_dcide_deck_2026_<mm>.png`.
+
+### 9.5 Cenários LI / LS no backtest: a faixa contém a bandeira real?
+
+A variante A dá o cenário esperado (cor da média). Para LI (seco, X alto) e LS (úmido, X baixo), três formas, todas com o que
+existia na data do deck:
+1. **Percentil mensal da ENA dos membros:** trajetória de referência = P10 (LI) e P90 (LS) da ENA do SIN dos 51 membros
+   recentrados, mês a mês → 15 séries → GSF, PLD, X e cor (faixa 50%: P25/P75).
+2. **X por membro:** cada membro escolhe suas 15 séries (como a variante B); LI/LS = P90/P10 do X entre os membros.
+3. **σ calibrado por grupo:** X médio ± 1,28σ (80%) ou ± 0,67σ (50%), σ por grupo M+1–3 / M+4–6 (9.3).
+
+Medida principal: **X real dentro da faixa** (contínua; o ideal é 80% e 50%). A "cor real dentro da faixa" sai sempre acima do
+nominal porque a cor é discreta (uma faixa de X pequena dentro de uma cor já "acerta"); por isso vem junto o nº de cores que a
+faixa cobre (largura). Amostra comum: 45 previsões com σ disponível (decks ago/25 a set/26); fora da amostra em relação aos
+dados, mas a comparação entre os métodos é feita na mesma amostra (dentro da amostra).
+
+| Faixa 80% | X real na faixa (M+1–3 / M+4–6) | Cor real na faixa (M+1–3 / M+4–6) | Nº de cores (M+1–3 / M+4–6) |
+|---|---|---|---|
+| 1. Percentil mensal da ENA | 76% / **75%** | 96% / 100% | 1,9 / **2,9** |
+| 2. X por membro | 80% / 50% | 92% / 95% | 1,8 / 2,7 |
+| 3. σ por grupo | 84% / 45% | 92% / 85% | 1,6 / 2,5 |
+
+- Até M+3 as três formas são razoavelmente calibradas (76–84% do X real dentro da faixa de 80%) e a faixa cobre 1,6–1,9 cor.
+- **Em M+4–6, só a forma 1 mantém a cobertura (75%), mas a faixa cobre quase todas as cores (2,9 de 4).** As formas 2 e 3
+  são mais estreitas e erram para o lado barato: o real foi melhor que o LS (2º semestre de 2026, ECMWF seco demais).
+- A ENA real cai dentro de P10–P90 dos membros em 83% (M+1–3) e 77% (M+4–6): a faixa da hidrologia está calibrada; o que
+  estreita as formas 2 e 3 é a passagem ENA → preço (média de 15 séries por membro amortece os extremos).
