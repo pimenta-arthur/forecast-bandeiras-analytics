@@ -381,6 +381,7 @@ por mérito com antecedência) **não** aparece no bloco por usina e entra na t�
 | D026 | 2026-10-06 | Configuração de trabalho do teste do NEWAVE: **GSF** com os 10 cenários de ENA do SIN mais próxima no mês; **preço** com os 25 cenários de trajetória de ENA do SIN mais próxima (mais peso nos meses recentes), PLD de cada cenário pela fórmula do gatilho (4 submercados). **Sem** termo de armazenamento futuro: na data da previsão só se conhece o armazenamento atual (já embutido no deck); o armazenamento futuro entra implicitamente pela trajetória de ENA de cada série | Melhor configuração realizável no estresse (seção 8.4); a seção 8.5 usa o armazenamento futuro real (gabarito) e é limite superior | Proposta (revalidar com mais decks e com o ECMWF) |
 | D027 | 2026-10-06 | Probabilidade de cada cor pelo **erro histórico da média**: X médio das 25 séries como referência e X real ~ Normal(X médio, σ do erro histórico); cor exibida = cor da média | Melhor Brier (0,235 × 0,33) e maior probabilidade da cor real (76% × 66–69%) nos 3 decks; sem a circularidade de pesar séries pela distância à média (seção 8.7) | **Suspensa: vazamento de dados** — o σ foi estimado com erros de meses posteriores à data do deck. Refazer com σ estimado só com previsões já realizadas na data (decks de anos anteriores) |
 | D028 | 2026-10-07 | Horizonte de avaliação do backtest: **M+1 a M+7** | 7 meses é o alcance da previsão sazonal do ECMWF que vai alimentar a ENA de referência | Decidido |
+| D029 | 2026-10-07 | Escolha das séries: **k = 15** e **peso igual em toda a trajetória de ENA** (substitui k = 25 e meia-vida 2 da D026). Padrão em `backtest.K_PADRAO` e `backtest.MEIA_VIDA_PADRAO` | Escolhidos só com os alvos de 2025 e confirmados em 2026 (seções 8.9 e 8.10); robusto ao incluir 2026 | Decidido |
 | D022 | 2026-10-05 | Fonte única do DECOMP: `relato.rv0` (balanço, GH, ANDE, PCH/PCT/MMGD, térmica por usina, EAR). `renovaveis.csv` só para separar eólica e solar a partir de out/2025. `sumario.rv0` não é mais necessário | O `relato` reproduz o `sumario` com diferença zero e tem a separação da térmica; cobre todo o histórico | Decidido |
 
 ## 5. Questões em aberto
@@ -710,3 +711,54 @@ média é amarela. Métodos testados (método mesma série; ENA real como refer�
   a probabilidade separa bem as previsões seguras das duvidosas.
 - Candidato natural (sem vazamento): **correção de viés por mês do ano**, estimada só com erros de anos anteriores
   (ex.: o erro de maio/2025 corrige as previsões de maio/2026).
+
+### 8.9 Teste dos parâmetros k (número de séries) e meia-vida da trajetória de ENA
+
+Divisão no tempo, sem vazamento: **escolha** com as previsões de alvo em 2025 (decks de 2025; 39 previsões, h = 1 a 7) e
+**teste** com os decks de 2026 (33 previsões). ENA de referência = oráculo. `backtest.preparar_deck` (parte cara, uma vez por
+deck) + `backtest.prever_com_parametros` (escolha das séries). k ∈ {5, 10, 15, 25, 50, 100, 200}; meia-vida ∈ {0 (só o
+mês-alvo), 0,5, 1, 2 (atual), 4, ∞ (peso igual na trajetória toda)}.
+
+| Configuração | 2025 (escolha): acerto | 2025: erro médio de X | 2026 (teste): acerto | 2026: erro médio de X |
+|---|---|---|---|---|
+| Só o mês-alvo (meia-vida 0), k = 25 | 44% | 21,0 | 76% | 10,8 |
+| **Atual: k = 25, meia-vida 2** | 62% | 13,2 | 73% | 10,8 |
+| k = 15, meia-vida 2 | 69% | 13,0 | 73% | 10,9 |
+| k = 15, peso igual | 72% | 12,5 | 79% | 11,3 |
+| **k = 10, peso igual** (menor erro de X em 2025) | 67% | **12,1** | **82%** | 11,2 |
+| k = 200, peso igual | 62% | 13,2 | 73% | 14,0 |
+
+- **A trajetória importa muito:** usar só a ENA do mês-alvo é claramente o pior em 2025 (41–49% de acerto, erro de X 20–24).
+  Mais memória ajuda: em 2025, meia-vida 4 ou peso igual > meia-vida 2 > 1 > 0,5 > 0.
+- **k entre 10 e 15** foi um pouco melhor que 25 em 2025; k = 200 piora. Em 2026, k de 10 a 25 fica parecido.
+- A configuração escolhida só com 2025 (k = 10, peso igual) acerta **82%** em 2026 contra 73% da atual (+3 previsões em 33),
+  mas o erro de X em 2026 fica levemente pior (11,2 × 10,8). Ganho modesto e dentro do ruído de uma amostra pequena.
+- **k por estação não ajuda:** o melhor k por estação em 2025 muda conforme a meia-vida (transição: 10 com meia-vida 2, 50
+  com peso igual) e, no teste de 2026, não supera o k fixo (76% × 76%; 79% × 82%).
+- **A transição úmido → seco não melhora com nenhum k ou meia-vida:** em 2025 o acerto nos alvos de mar–jun fica em 30–50%
+  em todas as combinações. O problema da transição não é de parâmetro; é viés (GSF previsto alto e preço baixo).
+
+### 8.10 Backtest com k = 15 e peso igual (D029) × referência (k = 25, meia-vida 2)
+
+> Marco: commit marcado com a tag **`d029-k15-peso-igual`** (`git checkout d029-k15-peso-igual` para voltar a este ponto).
+
+`notebooks/02g_backtest_k15.ipynb`, `data/processed/backtest_newave_k15.parquet`, figuras em
+`reports/figures/backtest_k15_peso_igual/`. A referência continua em `02f`, `backtest_newave.parquet` e
+`reports/figures/backtest_sem_vazamento/`. Mesmas regras de vazamento; ENA = oráculo.
+
+| | Referência (k = 25, meia-vida 2) | Atual (k = 15, peso igual) |
+|---|---|---|
+| Acerto da cor (89 previsões, h = 1 a 7) | 71% | **78%** |
+| Acerto nos alvos de 2025 (base da escolha) | 62% | 72% |
+| Acerto nos decks de 2026 (teste) | 73% | **79%** |
+| Erro médio GSF | 0,040 | 0,040 |
+| Erro médio PLD (R$/MWh) | 65,6 | 63,6 |
+| Erro médio X | 11,4 | 11,2 |
+| Prob. média da cor real | 75% | 76% |
+| Brier | 0,28 | **0,26** |
+
+- Seis previsões mudaram de cor e **todas passaram a acertar**; nenhuma passou a errar: fev/25 → jul/25 (V1), mar/25 →
+  ago e set/25 (V2), ago/25 → nov/25 (V1), mar e abr/26 → set/26 (Am). A memória maior da trajetória capturou melhor a
+  seca de 2025 e a recuperação do 2º semestre de 2026.
+- Por horizonte, o ganho aparece de h = 3 em diante (h = 5: 62% → 85%; h = 6: 67% → 83%); h = 1 e 2 não mudam.
+- A transição úmido → seco continua sendo o ponto fraco (maio/2026 segue verde em todos os decks).

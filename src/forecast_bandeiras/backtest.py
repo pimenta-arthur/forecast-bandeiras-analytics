@@ -18,6 +18,11 @@ from forecast_bandeiras import load, newave, regra
 
 SUBS = newave.SUBS
 
+# Parâmetros da escolha de séries (D029): escolhidos só com os alvos de 2025 e testados em 2026
+# (seção 8.9 da metodologia). Referência anterior: k = 25, meia-vida = 2.
+K_PADRAO = 15
+MEIA_VIDA_PADRAO = np.inf  # peso igual em toda a trajetória de ENA
+
 
 def _bloco_largura_fixa(linhas: list[str], inicio: int) -> pd.Series:
     """Lê as linhas de ano após `inicio` (largura fixa: ano + 12 campos de 8) até o próximo cabeçalho."""
@@ -79,16 +84,12 @@ def _tabela_periodos(df: pd.DataFrame) -> pd.DataFrame:
     return t.loc[:, t.abs().sum() > 0]
 
 
-def prever_deck(
-    ano: int, mes: int, base: pd.DataFrame, horizonte: int = 7, k: int = 25
-) -> pd.DataFrame:
-    """Previsões de um deck para os meses-alvo de h = 0 (mês do deck) a h = `horizonte`.
+def preparar_deck(ano: int, mes: int, base: pd.DataFrame, horizonte: int = 7) -> dict:
+    """Parte cara do backtest: lê o deck e calcula GSF e PLD gatilho de TODAS as séries por mês-alvo.
 
-    Horizonte padrão de 7 meses: alcance da previsão sazonal do ECMWF que alimentará a ENA (D028).
-
-    `base` é a base mensal (features.base_mensal) indexada por Period, usada só para a
-    ENA de referência (oráculo) e para os valores do mês do deck (GF_band, PLD mín/máx).
-    Retorna uma linha por mês-alvo com GSF médio, PLD médio, X médio e a cor da média.
+    Tudo com informação disponível na data do deck (ver docstring do módulo). Horizonte padrão
+    de 7 meses: alcance da previsão sazonal do ECMWF que alimentará a ENA (D028).
+    Retorna dict com inicio, alvos, ena (série × período), gsf e pld (série × mês-alvo).
     """
     pasta = newave.caminho_deck(ano, mes)
     inicio = pd.Period(f"{ano}-{mes:02d}", "M")
@@ -115,41 +116,83 @@ def prever_deck(
     kf = (1 - f["perda_bruta_conexao"]) * (1 - f["perda_conexao_cg"])
     k_pch = f["part_pch_mre"] * (1 - f["perda_pch_cg"])
 
-    linhas = []
+    gsf, pld = {}, {}
     for alvo in alvos:
-        # Séries: trajetória de ENA do início do deck até o alvo (ENA real = oráculo).
-        trajetoria = [inicio + i for i in range((alvo - inicio).n + 1)]
-        ref = base.loc[trajetoria, "ena_sin"]
-        ref.index = trajetoria
-        idx = newave.distancia_trajetoria(ena[trajetoria], ref).nsmallest(k).index
-
-        # GSF de cada série com ANDE e PCH projetadas pelo deck.
-        gh_band = (gh.loc[idx, alvo] - entradas["ande"][alvo]) * kf + entradas[
-            "pch"
-        ].loc[alvo].sum() * k_pch
-        gsf_medio = round((gh_band / gf_band).mean(), 2)
-
+        # GSF de cada série com ANDE e PCH projetadas pelo deck (sem arredondar).
+        gh_band = (gh[alvo] - entradas["ande"][alvo]) * kf + entradas["pch"].loc[
+            alvo
+        ].sum() * k_pch
+        gsf[alvo] = gh_band / gf_band
         # PLD gatilho de cada série: limites por patamar e submercado, horas do calendário,
         # ponderação pela carga projetada pelo deck.
         horas = load.horas_por_semana(alvo.year, alvo.month)
         peso_pat = (horas.sum(axis=1) / horas.to_numpy().sum()).to_numpy()
         carga = entradas["carga"].loc[alvo]
-        pld = 0.0
+        total = 0.0
         for s in SUBS:
             d = cmo[s][(cmo[s].ano == alvo.year) & (cmo[s].mes == alvo.month)]
-            d = (
-                d.pivot(index="serie", columns="pat", values="valor")
-                .sort_index(axis=1)
-                .loc[idx]
-            )
-            pld = (
-                pld
-                + (d.clip(pld_min, pld_max).to_numpy() * peso_pat).sum(axis=1)
+            d = d.pivot(index="serie", columns="pat", values="valor").sort_index(axis=1)
+            total = (
+                total
+                + pd.Series(
+                    (d.clip(pld_min, pld_max).to_numpy() * peso_pat).sum(axis=1),
+                    index=d.index,
+                )
                 * carga[s]
                 / carga.sum()
             )
-        pld_medio = float(np.mean(pld))
+        pld[alvo] = total
+    return {
+        "inicio": inicio,
+        "alvos": alvos,
+        "ena": ena,
+        "gsf": pd.DataFrame(gsf),
+        "pld": pd.DataFrame(pld),
+    }
 
+
+def distancia_trajetoria(
+    ena: pd.DataFrame, referencia: pd.Series, meia_vida: float
+) -> pd.Series:
+    """Distância de cada série à trajetória de ENA de referência (erro relativo², média ponderada).
+
+    Peso de um mês a `idade` meses do alvo: 0,5 ** (idade / meia_vida). `meia_vida` = 0 usa só o
+    mês-alvo; `meia_vida` = inf dá peso igual a toda a trajetória.
+    """
+    meses = list(referencia.index)
+    idade = np.arange(len(meses))[::-1]
+    if meia_vida == 0:
+        pesos = (idade == 0).astype(float)
+    elif np.isinf(meia_vida):
+        pesos = np.ones(len(meses))
+    else:
+        pesos = 0.5 ** (idade / meia_vida)
+    erro = (ena[meses] - referencia.values) / referencia.values
+    return (erro**2 * pesos).sum(axis=1) / pesos.sum()
+
+
+def prever_com_parametros(
+    prep: dict, base: pd.DataFrame, k=None, meia_vida: float | None = None
+) -> pd.DataFrame:
+    """Parte barata: escolhe as k séries por mês-alvo e calcula GSF, PLD, X e a cor da média.
+
+    `k` pode ser um inteiro ou uma função mês-alvo (Period) -> inteiro (k por estação).
+    A ENA de referência é a real (ORÁCULO). Sem argumentos, usa K_PADRAO e MEIA_VIDA_PADRAO.
+    """
+    k = K_PADRAO if k is None else k
+    meia_vida = MEIA_VIDA_PADRAO if meia_vida is None else meia_vida
+    inicio, linhas = prep["inicio"], []
+    for alvo in prep["alvos"]:
+        trajetoria = [inicio + i for i in range((alvo - inicio).n + 1)]
+        ref = pd.Series(base.loc[trajetoria, "ena_sin"].to_numpy(), index=trajetoria)
+        k_alvo = k(alvo) if callable(k) else k
+        idx = (
+            distancia_trajetoria(prep["ena"][trajetoria], ref, meia_vida)
+            .nsmallest(k_alvo)
+            .index
+        )
+        gsf_medio = round(prep["gsf"].loc[idx, alvo].mean(), 2)
+        pld_medio = float(prep["pld"].loc[idx, alvo].mean())
         linhas.append(
             {
                 "deck": inicio,
@@ -162,6 +205,25 @@ def prever_deck(
             }
         )
     return pd.DataFrame(linhas)
+
+
+def prever_deck(
+    ano: int,
+    mes: int,
+    base: pd.DataFrame,
+    horizonte: int = 7,
+    k=None,
+    meia_vida: float | None = None,
+) -> pd.DataFrame:
+    """Previsões de um deck para os meses-alvo de h = 0 (mês do deck) a h = `horizonte`.
+
+    `base` é a base mensal (features.base_mensal) indexada por Period, usada só para a
+    ENA de referência (oráculo) e para os valores do mês do deck (GF_band, PLD mín/máx).
+    Retorna uma linha por mês-alvo com GSF médio, PLD médio, X médio e a cor da média.
+    """
+    return prever_com_parametros(
+        preparar_deck(ano, mes, base, horizonte), base, k, meia_vida
+    )
 
 
 def sigma_disponivel(
