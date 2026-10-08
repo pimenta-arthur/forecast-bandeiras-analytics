@@ -11,6 +11,8 @@ nessa data.
 - ENA de referência: a real (ORÁCULO) até entrar a previsão do ECMWF.
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -84,6 +86,22 @@ def _tabela_periodos(df: pd.DataFrame) -> pd.DataFrame:
     return t.loc[:, t.abs().sum() > 0]
 
 
+def horas_patamar(alvo: pd.Period) -> pd.DataFrame:
+    """Horas por patamar e semana do mês-alvo (CCEE AAC001).
+
+    Se os patamares do ano ainda não foram publicados (ex.: 2027 visto de 2026), usa o mesmo mês
+    do ano anterior (D032): só a proporção de horas por patamar entra no PLD e ela muda pouco.
+    """
+    try:
+        return load.horas_por_semana(alvo.year, alvo.month)
+    except StopIteration:
+        warnings.warn(
+            f"patamares de {alvo.year} indisponíveis; usando {alvo.month:02d}/{alvo.year - 1}",
+            stacklevel=2,
+        )
+        return load.horas_por_semana(alvo.year - 1, alvo.month)
+
+
 def preparar_deck(ano: int, mes: int, base: pd.DataFrame, horizonte: int = 7) -> dict:
     """Parte cara do backtest: lê o deck e calcula GSF e PLD gatilho de TODAS as séries por mês-alvo.
 
@@ -125,7 +143,7 @@ def preparar_deck(ano: int, mes: int, base: pd.DataFrame, horizonte: int = 7) ->
         gsf[alvo] = gh_band / gf_band
         # PLD gatilho de cada série: limites por patamar e submercado, horas do calendário,
         # ponderação pela carga projetada pelo deck.
-        horas = load.horas_por_semana(alvo.year, alvo.month)
+        horas = horas_patamar(alvo)
         peso_pat = (horas.sum(axis=1) / horas.to_numpy().sum()).to_numpy()
         carga = entradas["carga"].loc[alvo]
         total = 0.0
