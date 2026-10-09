@@ -98,6 +98,15 @@
   .painel .pt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; flex: none; }
   .painel .sep.larga { margin-block: 10px 6px; }
   .hero h1, h2 { font-size: 1.5rem; }
+  .meta .atualizado { margin-left: auto; }
+  .proposta { font-family: var(--f-data); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 2px 6px; vertical-align: middle; margin-left: 8px; }
+  #rodadas { width: 100%; min-width: 0; }
+  #rodadas .c { white-space: nowrap; overflow: hidden; font-size: 0.62rem; }
+  #rodadas .cab { font-size: 0.6rem; overflow: hidden; }
+  .tempo .c .seta { font-size: 0.6rem; margin-left: 2px; }
+  .tempo .rot small { display: block; font-size: 0.66rem; color: var(--ink-3); }
+  .barra-abas { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  #leg-traj, #leg-gsf { display: grid; gap: 10px; }
   .leg { font-size: 0.8rem; line-height: 1.45; color: var(--ink-3); margin: 0; }
   /* mais compacto */
   main { gap: 34px; }
@@ -126,49 +135,48 @@
     <h1 id="titulo">Projeção de Bandeiras Tarifárias</h1>
     <div class="meta" id="meta"></div>
     <div class="bloco"><div class="rolagem"><div class="painel" id="painel"></div></div>
-      <p class="leg">Quanto mais forte a cor, maior a chance. GSF e PLD gatilho são médias das 15 séries de cada cenário; com GSF acima de 0,96, a bandeira é verde para qualquer preço. Úmido e seco: P90 e P10 dos membros do ECMWF.</p></div>
+      <p class="leg">Quanto mais forte a cor, maior a chance. GSF e PLD gatilho são médias das 15 séries de cada cenário; com GSF acima de 0,96, a bandeira é verde para qualquer preço. Seco e úmido: P10 e P90 dos membros do ECMWF.</p></div>
   </section>
 
   <section aria-labelledby="s-escolha">
-    <h2 id="s-escolha">Seleção de cenários hidrológicos</h2>
-    <div class="abas" id="abas-cen" role="group" aria-label="Cenário">
-      <button type="button" id="cen-esp" data-cen="esp">Esperado</button>
-      <button type="button" id="cen-li" data-cen="li">Seco (LI)</button>
-      <button type="button" id="cen-ls" data-cen="ls">Úmido (LS)</button>
+    <h2 id="s-escolha">Seleção de cenários hidrológicos e PLD gatilho</h2>
+    <div class="barra-abas">
+      <div class="abas" id="abas-cen" role="group" aria-label="Cenário">
+        <button type="button" id="cen-esp" data-cen="esp">Esperado</button>
+        <button type="button" id="cen-li" data-cen="li">Seco (LI)</button>
+        <button type="button" id="cen-ls" data-cen="ls">Úmido (LS)</button>
+      </div>
+      <div class="abas" id="abas-vis" role="group" aria-label="Visão">
+        <button type="button" id="vis-traj" data-vis="traj">Trajetórias</button>
+        <button type="button" id="vis-gsf" data-vis="gsf">Composição do GSF</button>
+      </div>
     </div>
     <div class="mini6" id="mini6"></div>
+    <div class="mini6" id="wf6" hidden></div>
+    <div id="leg-traj">
     <div class="legenda-mini"><span><i style="background:var(--vazio)"></i>2.000 séries (P10–P90)</span><span><i class="l" id="leg-cen" style="border-color:var(--cen-esp)"></i>15 escolhidas</span><span><i class="t" style="border-color:var(--v1)"></i>ECMWF</span><span><i style="width:3px;height:12px;background:var(--ink)"></i>Média das 15</span></div>
     <p class="leg">O NEWAVE simula 2.000 futuros possíveis de chuva. Para cada mês, ficamos com os 15 cuja trajetória de ENA, do deck até o mês, mais se parece com a do ECMWF (média no esperado, P10 dos membros no seco, P90 no úmido). O GSF e o preço do mês vêm desses mesmos 15; embaixo de cada trajetória, os pontos são o GSF e o PLD de cada série e o traço é a média usada na projeção. Escalas iguais nos seis meses. O fundo da fileira do PLD mostra a bandeira que resultaria de cada preço, com o GSF médio do mês fixo; as bordas entre cores são os gatilhos de mudança de bandeira. No GSF, o tracejado marca 0,96, acima do qual a bandeira é verde para qualquer preço.</p>
+    </div>
+    <div id="leg-gsf" hidden>
+    <div class="legenda-mini"><span><i style="background:var(--ink-2)"></i>Geração hidráulica (NEWAVE)</span><span><i style="background:var(--v1)"></i>Deduções</span><span><i style="background:var(--vd)"></i>PCH no MRE</span><span><i class="l" id="leg-wf" style="border-color:var(--cen-esp);border-top-width:6px"></i>GH_band</span><span><i style="background:var(--ink-3)"></i>GF_band</span><span>Régua do GSF:</span><span><i style="background:var(--cen-ls);border-radius:50%"></i>Úmido</span><span><i style="background:var(--cen-esp);border-radius:50%"></i>Referência</span><span><i style="background:var(--cen-li);border-radius:50%"></i>Seco</span><span><i style="background:var(--ink-3);transform:rotate(45deg);width:9px;height:9px"></i>Mesmo mês do ano anterior (oficial)</span></div>
+    <p class="leg" id="wf-leg">Da geração hidráulica simulada ao GSF, com os fatores da CCEE. Média das 15 séries do cenário escolhido; ANDE, perdas, PCH e garantia física são as mesmas nos três cenários. Na régua, o ponto contornado é o cenário selecionado; abaixo dela, a geração que falta (ou sobra) para o GSF chegar a 0,96, acima do qual a bandeira é verde para qualquer preço. <span id="wf-sens"></span></p>
+    </div>
   </section>
 
   <section aria-labelledby="s-insumos">
     <h2 id="s-insumos">Fundamentos: hidrologia, geração e preço</h2>
     <div class="legenda-mini">
-      <span><i class="l" style="border-color:var(--ink)"></i>Realizado</span>
+      <span><i class="l" style="border-color:var(--ink)"></i>Oficial (PMO/CCEE)</span>
       <span><i class="l" style="border-color:var(--accent)"></i>Esperado</span>
       <span><i style="background:var(--faixa-proj)"></i>Faixa LI–LS</span>
       <span><i class="t" style="border-color:var(--ink-3)"></i>Referência</span>
     </div>
     <div class="grid3">
       <div class="bloco"><div class="ttl">ENA do SIN</div><svg id="g-ena" viewBox="0 0 340 220" role="img" aria-label="ENA realizada e projetada"></svg><p class="leg">Água que chega aos reservatórios, em mil MWmed. Tracejado: média histórica (MLT).</p></div>
-      <div class="bloco"><div class="ttl">GSF</div><svg id="g-gsf" viewBox="0 0 340 220" role="img" aria-label="GSF realizado e projetado"></svg><p class="leg">Acima de 0,96 (tracejado), a bandeira é verde qualquer que seja o preço.</p></div>
-      <div class="bloco"><div class="ttl">PLD gatilho</div><svg id="g-pld" viewBox="0 0 340 220" role="img" aria-label="PLD gatilho realizado e projetado"></svg><p class="leg">R$/MWh. Tracejado: PLD mínimo do ano.</p></div>
+      <div class="bloco"><div class="ttl">GSF</div><svg id="g-gsf" viewBox="0 0 340 220" role="img" aria-label="GSF oficial e projetado"></svg><p class="leg">Acima de 0,96 (tracejado), a bandeira é verde qualquer que seja o preço.</p></div>
+      <div class="bloco"><div class="ttl">PLD gatilho</div><svg id="g-pld" viewBox="0 0 340 220" role="img" aria-label="PLD gatilho oficial e projetado"></svg><p class="leg">R$/MWh. Tracejado: PLD mínimo do ano.</p></div>
     </div>
-    <p class="leg">A cor depende de dois números: o GSF, quanto as hidrelétricas geram frente à garantia física, e o PLD gatilho, o preço da energia. Ambos seguem a chuva. Linha cheia: realizado; azul: cenário esperado; faixa: do cenário seco (LI) ao úmido (LS).</p>
-  </section>
-
-  <section aria-labelledby="s-tempo">
-    <h2 id="s-tempo">Histórico e projeção</h2>
-    <div class="bloco">
-      <div class="ttl">Bandeiras acionadas e previsões do modelo</div>
-      <div class="rolagem"><div class="tempo" id="zoom"></div></div>
-    </div>
-    <div class="bloco">
-      <div class="ttl">Histórico de bandeiras tarifárias, 2015–2026</div>
-      <svg id="faixa-longa" viewBox="0 0 1040 88" role="img" aria-label="Bandeiras oficiais por mês desde 2015 e projeção"></svg>
-      <div class="legenda-mini" id="leg-cores"></div>
-    </div>
-    <p class="leg">No recorte, as linhas de baixo mostram o que o modelo previu um e três meses antes de cada bandeira (✗ = errou). Na faixa desde 2015, os meses projetados têm contorno tracejado.</p>
+    <p class="leg">A cor depende de dois números: o GSF, quanto as hidrelétricas geram frente à garantia física, e o PLD gatilho, o preço da energia. Ambos seguem a chuva. Linha cheia: oficial (PMO/CCEE); azul: cenário esperado; faixa: do cenário seco (LI) ao úmido (LS).</p>
   </section>
 
   <section aria-labelledby="s-abaco">
@@ -180,17 +188,38 @@
     </div>
   </section>
 
-  <section aria-labelledby="s-gsf">
-    <h2 id="s-gsf">Composição do GSF</h2>
-    <div class="abas" id="abas-cenwf" role="group" aria-label="Cenário">
-      <button type="button" id="wf-esp" data-cen="esp">Esperado</button>
-      <button type="button" id="wf-li" data-cen="li">Seco (LI)</button>
-      <button type="button" id="wf-ls" data-cen="ls">Úmido (LS)</button>
+  <section aria-labelledby="s-tempo">
+    <h2 id="s-tempo">Histórico e projeção</h2>
+    <div class="bloco">
+      <div class="ttl">Bandeiras acionadas e evolução das projeções</div>
+      <div class="abas" id="abas-rod" role="group" aria-label="Quantidade de rodadas">
+        <button type="button" id="rod-6" data-n="6">Últimas 6 rodadas</button>
+        <button type="button" id="rod-12" data-n="12">Últimas 12</button>
+        <button type="button" id="rod-todas" data-n="99">Todas</button>
+      </div>
+      <div class="rolagem"><div class="tempo" id="rodadas"></div></div>
     </div>
-    <div class="mini6" id="wf6"></div>
-    <div class="legenda-mini"><span><i style="background:var(--ink-2)"></i>Geração hidráulica (NEWAVE)</span><span><i style="background:var(--v1)"></i>Deduções</span><span><i style="background:var(--vd)"></i>PCH no MRE</span><span><i class="l" id="leg-wf" style="border-color:var(--cen-esp);border-top-width:6px"></i>GH_band</span><span><i style="background:var(--ink-3)"></i>GF_band</span><span>Régua do GSF:</span><span><i style="background:var(--cen-ls);border-radius:50%"></i>Úmido</span><span><i style="background:var(--cen-esp);border-radius:50%"></i>Referência</span><span><i style="background:var(--cen-li);border-radius:50%"></i>Seco</span><span><i style="background:var(--ink-3);transform:rotate(45deg);width:9px;height:9px"></i>Mesmo mês do ano anterior (oficial)</span></div>
-    <p class="leg" id="wf-leg">Da geração hidráulica simulada ao GSF, com os fatores da CCEE. Média das 15 séries do cenário escolhido; ANDE, perdas, PCH e garantia física são as mesmas nos três cenários. Na régua, o ponto contornado é o cenário selecionado; abaixo dela, a geração que falta (ou sobra) para o GSF chegar a 0,96, acima do qual a bandeira é verde para qualquer preço. <span id="wf-sens"></span></p>
+    <div class="bloco">
+      <div class="ttl">Histórico de bandeiras tarifárias, 2015–2026</div>
+      <svg id="faixa-longa" viewBox="0 0 1040 88" role="img" aria-label="Bandeiras oficiais por mês desde 2015 e projeção"></svg>
+      <div class="legenda-mini" id="leg-cores"></div>
+    </div>
+    <p class="leg">Cada linha é uma rodada de projeção (deck do NEWAVE + ECMWF do mesmo mês), com a cor do cenário de referência e a probabilidade dela; lendo cada coluna de baixo para cima, vê-se como a projeção do mês mudou. ▲ cor mais cara e ▼ mais barata que na rodada anterior exibida; ✗ cor diferente da oficial. Rodadas marcadas como reconstruídas vêm do backtest, só com a informação disponível em cada data; não há decks de set e out/2025 nem de jun a ago/2026. Na faixa desde 2015, os meses projetados têm contorno tracejado.</p>
   </section>
+
+  <section aria-labelledby="s-adic">
+    <h2 id="s-adic">Adicional tarifário na conta de energia</h2>
+    <div class="bloco">
+      <div class="barra-abas"><div class="ttl" id="tt-adic">R$ por 100 kWh</div>
+        <div class="abas" id="abas-adic" role="group" aria-label="Período">
+          <button type="button" id="adic-rec" data-per="rec">Últimos 24 meses + projeção</button>
+          <button type="button" id="adic-todo" data-per="todo">Desde 2015</button>
+        </div></div>
+      <svg id="adicional" viewBox="0 0 1040 244" role="img" aria-label="Adicional tarifário por mês e projeção"></svg>
+      <p class="leg">Valor cobrado na conta em cada bandeira. Na projeção, a linha tracejada é o valor esperado (probabilidade × adicional de cada cor) e a faixa vai do cenário úmido ao seco, com os valores vigentes.</p>
+    </div>
+  </section>
+
 
   <section aria-labelledby="s-desemp">
     <h2 id="s-desemp">Desempenho histórico do modelo</h2>
@@ -205,15 +234,6 @@
       </div>
     </div>
     <p class="leg" id="desemp-sub"></p>
-  </section>
-
-  <section aria-labelledby="s-adic">
-    <h2 id="s-adic">Adicional tarifário na conta de energia</h2>
-    <div class="bloco">
-      <div class="ttl">R$ por 100 kWh, 2015 em diante</div>
-      <svg id="adicional" viewBox="0 0 1040 244" role="img" aria-label="Adicional tarifário por mês e projeção"></svg>
-      <p class="leg">Valor cobrado na conta em cada bandeira. Na projeção, o ponto é o valor esperado (probabilidade × adicional de cada cor) e a barra vai do cenário úmido ao seco, com os valores vigentes.</p>
-    </div>
   </section>
 
   <div class="aviso">
@@ -250,10 +270,9 @@
 
   // ---------- Cabeçalho ----------
   const fut = P.filter(p => !p.anunciada);
-  document.getElementById("titulo").innerHTML = `Projeção de Bandeiras Tarifárias <span class="pos">· Posição em ${D.gerado_em.split("-").reverse().join("/")}</span>`;
   document.getElementById("eyebrow").textContent = `Horizonte: ${rotLongo(P[0].alvo)} a ${rotLongo(P[P.length - 1].alvo)}`;
   document.getElementById("meta").innerHTML =
-    `<span>Premissas:</span><span>Deck NEWAVE ${rot(D.deck)}</span><span>ECMWF rodada ${rot(D.rodada_ecmwf)}</span><span>Atualizado em ${D.gerado_em.split("-").reverse().join("/")}</span>`;
+    `<span>Premissas:</span><span>Deck NEWAVE ${rot(D.deck)}</span><span>ECMWF rodada ${rot(D.rodada_ecmwf)}</span><span class="atualizado">Atualizado em ${D.gerado_em.split("-").reverse().join("/")}</span>`;
 
   const painel = document.getElementById("painel");
   painel.style.gridTemplateColumns = `118px repeat(${P.length}, minmax(76px, 1fr))`;
@@ -274,7 +293,7 @@
   P.forEach(p => add(`${n(p.gsf_esp, 2)} · R$ ${n(p.pld_esp)}`, "mval"));
   add("", "sep larga");
   add("Cenários alternativos de chuva · cor projetada", "btit");
-  [["Úmido (P90)", "ls"], ["Seco (P10)", "li"]].forEach(([r, k]) => {
+  [["Seco (P10)", "li"], ["Úmido (P90)", "ls"]].forEach(([r, k]) => {
     add(`<span><i class="pt" style="background:var(--cen-${k})"></i>${r}<br><small>GSF · PLD (R$/MWh)</small></span>`, "rp");
     P.forEach(p => {
       const c = p["cor_" + k];
@@ -301,60 +320,106 @@
   });
   document.getElementById("leg-cores").innerHTML = ["Verde", "Amarela", "Vermelha 1", "Vermelha 2", "Escassez hídrica"].map(c => `<span><i style="background:${COR[c]}"></i>${c}</span>`).join("") + '<span><i style="background:var(--vazio);outline:1px dashed var(--ink)"></i>Projeção</span>';
 
-  // ---------- Recorte ----------
-  const prevs = D.desempenho.previstas;
-  const recorte = [...H.slice(-24).map(h => h.mes), ...fut.map(p => p.alvo)];
-  const grade = `150px repeat(${recorte.length}, minmax(34px, 1fr))`;
-  const zoom = document.getElementById("zoom");
-  const linha = (rotulo, celula) => {
-    const l = document.createElement("div"); l.className = "lin"; l.style.gridTemplateColumns = grade;
-    l.innerHTML = `<span class="rot">${rotulo}</span>`; recorte.forEach(m => l.appendChild(celula(m))); zoom.appendChild(l);
-  };
-  const qcab = document.createElement("div"); qcab.className = "lin"; qcab.style.gridTemplateColumns = grade;
-  qcab.innerHTML = '<span class="rot"></span>';
-  let qi = 0;
-  while (qi < recorte.length) {
-    const m0 = recorte[qi], q = Math.floor((+m0.slice(5) - 1) / 3);
-    let k = 1; while (qi + k < recorte.length && Math.floor((+recorte[qi + k].slice(5) - 1) / 3) === q && recorte[qi + k].slice(0, 4) === m0.slice(0, 4)) k++;
-    const s = document.createElement("span"); s.className = "qcab"; s.style.gridColumn = `span ${k}`; s.textContent = `Q${q + 1}/${m0.slice(2, 4)}`; qcab.appendChild(s); qi += k;
-  }
-  zoom.appendChild(qcab);
-  const cab = document.createElement("div"); cab.className = "lin"; cab.style.gridTemplateColumns = grade;
-  cab.innerHTML = '<span class="rot"></span>' + recorte.map(m => `<span class="cab${m.endsWith("-01") ? " ano" : ""}">${rot(m)}</span>`).join("");
-  zoom.appendChild(cab);
+  // ---------- Mapa das bandeiras oficiais ----------
   const real = Object.fromEntries(H.map(h => [h.mes, h.cor]));
-  const projMap = Object.fromEntries(P.map(p => [p.alvo, p]));
-  const cel = (cor, txt, extra = "") => { const c = document.createElement("div"); c.className = "c " + (cor ? CLS[cor] : "") + extra; c.textContent = cor ? AB[cor] : ""; if (txt) dicaEm(c, txt); return c; };
-  linha("Oficial", m => real[m] ? cel(real[m], `${rot(m)} · oficial: ${real[m]}`) : cel(null));
-  linha("Projeção atual", m => { const p = projMap[m]; return p && !p.anunciada ? cel(p.cor_esp, `${rot(m)} · esperado ${p.cor_esp} (${pct(p.prob[p.cor_esp])})<br>úmido ${p.cor_ls} · seco ${p.cor_li}`, " proj") : cel(null); });
-  [["h1", "Previsto 1 mês antes"], ["h3", "Previsto 3 meses antes"]].forEach(([k, r]) =>
-    linha(r, m => { const v = prevs[m] && prevs[m][k]; return v ? cel(v, `${rot(m)} · ${r.toLowerCase()}: ${v}${real[m] ? " · oficial " + real[m] : ""}`, real[m] && v !== real[m] ? " erro" : "") : cel(null); }));
+
+  // ---------- Bandeiras acionadas e evolução das projeções por rodada ----------
+  (function () {
+    const RD = D.rodadas, NIV = { "Verde": 0, "Amarela": 1, "Vermelha 1": 2, "Vermelha 2": 3 };
+    const todosDecks = [...new Set(RD.map(r => r.deck))].sort().reverse();
+    const box = document.getElementById("rodadas");
+    let nRod = 6;
+    function probDe(r) { const m = r.prob.match(new RegExp(AB[r.esp] + " (\\d+%)")); return m ? m[1] : ""; }
+    function desenhar() {
+      document.querySelectorAll("#abas-rod button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.n === nRod)));
+      const decks = todosDecks.slice(0, nRod);
+      const dados = RD.filter(r => decks.includes(r.deck));
+      const cols = [...new Set(dados.map(r => r.alvo))].sort();
+      const grade = `118px repeat(${cols.length}, minmax(0, 1fr))`;
+      const curto = cols.length > 14; // muitas colunas: só a sigla na célula, probabilidade no tooltip
+      box.replaceChildren();
+      const linha = (rotulo, celula) => {
+        const l = document.createElement("div"); l.className = "lin"; l.style.gridTemplateColumns = grade;
+        l.innerHTML = `<span class="rot">${rotulo}</span>`; cols.forEach(m => l.appendChild(celula(m))); box.appendChild(l);
+      };
+      const cab = document.createElement("div"); cab.className = "lin"; cab.style.gridTemplateColumns = grade;
+      cab.innerHTML = '<span class="rot"></span>' + cols.map(m => `<span class="cab${m.endsWith("-01") ? " ano" : ""}">${rot(m)}</span>`).join("");
+      box.appendChild(cab);
+      const vazio = () => { const c = document.createElement("div"); c.className = "c"; return c; };
+      linha("Oficial", m => {
+        if (!real[m]) return vazio();
+        const c = document.createElement("div"); c.className = "c " + CLS[real[m]]; c.textContent = AB[real[m]];
+        const h = H.find(x => x.mes === m);
+        dicaEm(c, `<b>${rot(m)}</b> · oficial: ${real[m]}` +
+          (h && h.gsf != null ? `<br>GSF ${n(h.gsf, 2)} · PLD gatilho R$ ${n(h.pld, 2)}<br>boletim InfoBandeira (CCEE)` : "")); return c;
+      });
+      decks.forEach((dk, i) => {
+        const porAlvo = Object.fromEntries(dados.filter(r => r.deck === dk).map(r => [r.alvo, r]));
+        const atual = dk === D.deck;
+        const pub = dados.some(r => r.deck === dk && r.publicada);
+        linha(`<span>Rodada ${rot(dk)}<small>${atual ? "atual" : pub ? "publicada" : "reconstruída (backtest)"}</small></span>`, m => {
+          const r = porAlvo[m];
+          if (!r) return vazio();
+          const c = document.createElement("div");
+          c.className = "c " + CLS[r.esp] + (r.real && r.real !== r.esp ? " erro" : "") + (atual && !r.real ? " proj" : "");
+          // compara com a rodada anterior exibida que também projetou este mês
+          const ant = decks.slice(i + 1).map(d => dados.find(x => x.deck === d && x.alvo === m)).find(Boolean);
+          let seta = "";
+          if (ant && NIV[ant.esp] !== NIV[r.esp]) seta = NIV[r.esp] > NIV[ant.esp] ? "▲" : "▼";
+          c.innerHTML = `<span>${AB[r.esp]}${probDe(r) && !curto ? " " + probDe(r) : ""}${seta ? `<span class="seta">${seta}</span>` : ""}</span>`;
+          dicaEm(c, `<b>${rot(m)}</b> · rodada ${rot(dk)} (M+${r.h})<br>esperado ${r.esp}${r.prob ? " · " + r.prob : ""}<br>${r.gp}<br>seco ${r.li} · úmido ${r.ls}` +
+            (ant ? `<br>rodada anterior (${rot(ant.deck)}): ${ant.esp}` : "") + (r.real ? `<br>oficial: ${r.real}` : ""));
+          return c;
+        });
+      });
+    }
+    document.getElementById("abas-rod").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { nRod = +b.dataset.n; desenhar(); } });
+    desenhar();
+  })();
 
   // ---------- Adicional ----------
   (function () {
     const svg = document.getElementById("adicional"), w = 1040, h = 244, m = { l: 44, r: 12, t: 12, b: 40 };
-    const serie = [...H.map(x => ({ mes: x.mes, v: x.adicional / 10 })), ...fut.map(p => ({ mes: p.alvo, v: p.adicional_esperado / 10, lo: D.adicional_vigente[p.cor_ls] / 10, hi: D.adicional_vigente[p.cor_li] / 10, proj: true }))];
-    const vmax = Math.max(...serie.map(s => s.hi ?? s.v)) * 1.05;
-    const x = i => m.l + (i + 0.5) * (w - m.l - m.r) / serie.length, y = v => m.t + (h - m.t - m.b) * (1 - v / vmax);
-    [0, 5, 10, 15].filter(t => t <= vmax).forEach(t => { S(svg, "line", { x1: m.l, x2: w - m.r, y1: y(t), y2: y(t), stroke: "var(--rule)" }); S(svg, "text", { x: m.l - 6, y: y(t) + 3, "text-anchor": "end" }, "R$ " + n(t)); });
-    const hw = (w - m.l - m.r) / serie.length / 2;
-    const reais = serie.filter(s => !s.proj);
-    const d = reais.map((s, i) => (i ? `V${y(s.v)} H${x(i) + hw}` : `M${x(0) - hw},${y(s.v)} H${x(0) + hw}`)).join(" ");
-    S(svg, "path", { d, fill: "none", stroke: "var(--ink)", "stroke-width": 1.6 });
-    serie.forEach((s, i) => {
-      const mq = +s.mes.slice(5);
-      if ((mq - 1) % 3 === 0) {
-        S(svg, "line", { x1: x(i) - hw, x2: x(i) - hw, y1: h - m.b, y2: h - m.b + (mq === 1 ? 26 : 6), stroke: mq === 1 ? "var(--ink-3)" : "var(--rule)" });
-        S(svg, "text", { x: x(i) - hw + 1.5 * (w - m.l - m.r) / serie.length, y: h - m.b + 13, "text-anchor": "middle", style: "font-size:8px" }, "Q" + ((mq - 1) / 3 + 1));
-        if (mq === 1) S(svg, "text", { x: x(i) - hw + 3, y: h - 2, class: "forte" }, s.mes.slice(0, 4));
-      }
-      const alvo = S(svg, "rect", { x: x(i) - 3.5, y: m.t, width: 7, height: h - m.t - m.b, fill: "transparent" });
-      if (s.proj) {
-        S(svg, "line", { x1: x(i), x2: x(i), y1: y(s.lo), y2: y(s.hi), stroke: "var(--accent)", "stroke-width": 3, opacity: 0.35, "stroke-linecap": "round" });
-        S(svg, "circle", { cx: x(i), cy: y(s.v), r: 3.5, fill: "var(--accent)" });
-        dicaEm(alvo, `${rot(s.mes)} · projeção<br>esperado R$ ${n(s.v, 2)} · úmido R$ ${n(s.lo, 2)} · seco R$ ${n(s.hi, 2)} por 100 kWh`);
-      } else dicaEm(alvo, `${rot(s.mes)} · ${real[s.mes]} · R$ ${n(s.v, 2)} por 100 kWh`);
-    });
+    const todo = [...H.map(x => ({ mes: x.mes, v: x.adicional / 10 })), ...fut.map(p => ({ mes: p.alvo, v: p.adicional_esperado / 10, lo: D.adicional_vigente[p.cor_ls] / 10, hi: D.adicional_vigente[p.cor_li] / 10, proj: true }))];
+    function desenhar(per) {
+      document.querySelectorAll("#abas-adic button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.per === per)));
+      document.getElementById("tt-adic").textContent = per === "rec" ? "R$ por 100 kWh, últimos 24 meses e projeção" : "R$ por 100 kWh, 2015 em diante";
+      svg.replaceChildren();
+      const nReais = todo.filter(s => !s.proj).length;
+      const serie = per === "rec" ? todo.slice(nReais - 24) : todo;
+      const vmax = Math.max(5, ...serie.map(s => s.hi ?? s.v)) * 1.08;
+      const bw = (w - m.l - m.r) / serie.length, hw = bw / 2;
+      const x = i => m.l + (i + 0.5) * bw, y = v => m.t + (h - m.t - m.b) * (1 - v / vmax);
+      const marcas = []; for (let v = 0; v <= vmax; v += vmax > 10 ? 5 : 2) marcas.push(v);
+      marcas.forEach(t => { S(svg, "line", { x1: m.l, x2: w - m.r, y1: y(t), y2: y(t), stroke: "var(--rule)" }); S(svg, "text", { x: m.l - 6, y: y(t) + 3, "text-anchor": "end" }, "R$ " + n(t)); });
+      const i0 = serie.findIndex(s => s.proj), ult = i0 - 1;
+      // faixa úmido–seco em degraus e valor esperado tracejado
+      serie.forEach((s, i) => { if (s.proj) S(svg, "rect", { x: x(i) - hw, y: y(s.hi), width: bw, height: Math.max(1, y(s.lo) - y(s.hi)), fill: "var(--faixa-proj)" }); });
+      const reais = serie.slice(0, i0);
+      S(svg, "path", { d: reais.map((s, i) => (i ? `V${y(s.v)} H${x(i) + hw}` : `M${x(0) - hw},${y(s.v)} H${x(0) + hw}`)).join(" "), fill: "none", stroke: "var(--ink)", "stroke-width": 1.6 });
+      S(svg, "path", { d: `M${x(ult) + hw},${y(serie[ult].v)} ` + serie.slice(i0).map((s, j) => `V${y(s.v)} H${x(i0 + j) + hw}`).join(" "), fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-dasharray": "5 3" });
+      S(svg, "line", { x1: x(ult) + hw, x2: x(ult) + hw, y1: m.t, y2: h - m.b, stroke: "var(--ink-3)", "stroke-dasharray": "2 3" });
+      S(svg, "text", { x: x(ult) + hw + 4, y: m.t + 9 }, "projeção");
+      serie.forEach((s, i) => {
+        const mq = +s.mes.slice(5);
+        if (per === "rec") {
+          S(svg, "text", { x: x(i), y: h - m.b + 13, "text-anchor": "middle", style: "font-size:8.5px" }, "JFMAMJJASOND"[mq - 1]);
+          if (mq === 1 || i === 0) {
+            S(svg, "line", { x1: x(i) - hw, x2: x(i) - hw, y1: h - m.b, y2: h - m.b + 26, stroke: "var(--ink-3)" });
+            S(svg, "text", { x: x(i) - hw + 3, y: h - 2, class: "forte" }, s.mes.slice(0, 4));
+          }
+        } else if ((mq - 1) % 3 === 0) {
+          S(svg, "line", { x1: x(i) - hw, x2: x(i) - hw, y1: h - m.b, y2: h - m.b + (mq === 1 ? 26 : 6), stroke: mq === 1 ? "var(--ink-3)" : "var(--rule)" });
+          S(svg, "text", { x: x(i) - hw + 1.5 * bw, y: h - m.b + 13, "text-anchor": "middle", style: "font-size:8px" }, "Q" + ((mq - 1) / 3 + 1));
+          if (mq === 1) S(svg, "text", { x: x(i) - hw + 3, y: h - 2, class: "forte" }, s.mes.slice(0, 4));
+        }
+        const alvo = S(svg, "rect", { x: x(i) - hw, y: m.t, width: bw, height: h - m.t - m.b, fill: "transparent" });
+        if (s.proj) dicaEm(alvo, `${rot(s.mes)} · projeção<br>esperado R$ ${n(s.v, 2)} · úmido R$ ${n(s.lo, 2)} · seco R$ ${n(s.hi, 2)} por 100 kWh`);
+        else dicaEm(alvo, `${rot(s.mes)} · ${real[s.mes]} · R$ ${n(s.v, 2)} por 100 kWh`);
+      });
+    }
+    document.getElementById("abas-adic").addEventListener("click", e => { const b = e.target.closest("button"); if (b) desenhar(b.dataset.per); });
+    desenhar("rec");
   })();
 
   // ---------- Insumos ----------
@@ -383,7 +448,7 @@
       if (i % 3 === 0 || i === meses.length - 1) S(svg, "text", { x: x(i), y: h - 8, "text-anchor": "middle" }, rot(mm));
       const alvo = S(svg, "rect", { x: x(i) - 6, y: m.t, width: 12, height: h - m.t - m.b, fill: "transparent" });
       const o = i <= i0 ? R[i] : Q[i - i0 - 1];
-      dicaEm(alvo, i <= i0 ? `${rot(mm)} · realizado ${opts.fmtD(val(o, campo))}` :
+      dicaEm(alvo, i <= i0 ? `${rot(mm)} · oficial ${opts.fmtD(val(o, campo))}` :
         `${rot(mm)} · esperado ${opts.fmtD(val(o, campo + "_esp"))}<br>seco ${opts.fmtD(val(o, campo + "_li"))} · úmido ${opts.fmtD(val(o, campo + "_ls"))}`);
     });
   }
@@ -434,7 +499,7 @@
   const CORC = { esp: "var(--cen-esp)", li: "var(--cen-li)", ls: "var(--cen-ls)" };
   let cenSel = "esp";
   function desenharMini() {
-    document.querySelectorAll("#abas-cen button, #abas-cenwf button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cen === cenSel)));
+    document.querySelectorAll("#abas-cen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cen === cenSel)));
     document.getElementById("leg-cen").style.borderColor = CORC[cenSel];
     const box = document.getElementById("mini6"); box.replaceChildren();
     const cor = CORC[cenSel];
@@ -489,7 +554,7 @@
       fila(222, "PLD R$", s.pld, plo, phi, v => n(v), zonasPld, v => n(v));
     });
   }
-  ["abas-cen", "abas-cenwf"].forEach(id => document.getElementById(id).addEventListener("click", e => {
+  ["abas-cen"].forEach(id => document.getElementById(id).addEventListener("click", e => {
     const b = e.target.closest("button"); if (b) { cenSel = b.dataset.cen; desenharMini(); desenharWf(); }
   }));
   desenharMini();
@@ -552,6 +617,14 @@
     });
   }
   desenharWf();
+  function mostrarVisao(v) {
+    const gsf = v === "gsf";
+    document.getElementById("mini6").hidden = gsf; document.getElementById("leg-traj").hidden = gsf;
+    document.getElementById("wf6").hidden = !gsf; document.getElementById("leg-gsf").hidden = !gsf;
+    document.querySelectorAll("#abas-vis button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vis === v)));
+  }
+  document.getElementById("abas-vis").addEventListener("click", e => { const b = e.target.closest("button"); if (b) mostrarVisao(b.dataset.vis); });
+  mostrarVisao("traj");
   {
     const f = D.fatores, gf = CG.esp[0].gf_band;
     const sens = 1000 * (1 - f.perda_bruta_conexao / 100) * (1 - f.perda_conexao_cg / 100) / gf;
