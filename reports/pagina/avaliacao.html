@@ -19,7 +19,6 @@
   <nav class="nav" aria-label="Páginas">
     <span class="marca">Previsor de Bandeiras</span>
     <a href="./">Projeções</a>
-    <a href="produto.html">Projeções v1</a>
     <a href="avaliacao.html" aria-current="page">Avaliação</a>
     <a href="metodologia.html">Metodologia</a>
   </nav>
@@ -143,9 +142,8 @@
 
   <section aria-labelledby="s-macro">
     <h2 id="s-macro">O que entregar para a macro</h2>
-    <p class="texto">Para a projeção da energia no IPCA, sugiro entregar o adicional tarifário esperado de cada mês, usando a probabilidade inteira e não só a cor mais provável:</p>
-    <div class="formula">adicional esperado (R$/100 kWh) = P(amarela) × adicional amarela + P(vermelha 1) × adicional V1 + P(vermelha 2) × adicional V2</div>
-    <p class="texto">Os valores do adicional por cor devem ser os vigentes na resolução da ANEEL; precisam ser confirmados antes do primeiro envio. Junto, vão a cor esperada e os cenários seco e úmido, com a confiança de cada horizonte.</p>
+    <p class="texto">Para a projeção da energia no IPCA, entregar em cada mês a bandeira esperada (a cor do cenário de referência) com o adicional dessa bandeira, que é o valor que de fato vai para a conta; não existe adicional proporcional à probabilidade. Junto, vão a probabilidade de cada cor e as cores dos cenários seco e úmido, que mostram o risco de a bandeira subir, com a confiança de cada horizonte.</p>
+    <p class="texto">Os valores do adicional por cor são os vigentes na resolução da ANEEL (hoje: amarela R$ 1,885, vermelha 1 R$ 4,463 e vermelha 2 R$ 7,877 por 100 kWh).</p>
   </section>
 
   <section aria-labelledby="s-ressalvas">
@@ -161,7 +159,7 @@
   <section aria-labelledby="s-passos">
     <h2 id="s-passos">Próximos passos</h2>
     <ol class="passos texto">
-      <li><strong>Rotina mensal.</strong> Deck e ECMWF de cada mês geram as probabilidades e o adicional esperado. Cada mês novo amplia o backtest.</li>
+      <li><strong>Rotina mensal.</strong> Deck e ECMWF de cada mês geram as probabilidades, a bandeira esperada e o adicional dela. Cada mês novo amplia o backtest.</li>
       <li><strong>Preço.</strong> Corrigir o viés na transição do período úmido para o seco e testar a combinação com a curva da Dcide, o que exige o histórico de curvas de 2025.</li>
       <li><strong>Mais história.</strong> Decks de 2023–2024, se houver ECMWF para eles, para avaliar fora do período em que os parâmetros foram escolhidos.</li>
     </ol>

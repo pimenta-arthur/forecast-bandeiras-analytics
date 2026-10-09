@@ -125,7 +125,6 @@
   <nav class="nav" aria-label="Páginas">
     <span class="marca">Previsor de Bandeiras</span>
     <a href="./" aria-current="page">Projeções</a>
-    <a href="produto.html">Projeções v1</a>
     <a href="avaliacao.html">Avaliação</a>
     <a href="metodologia.html">Metodologia</a>
   </nav>
@@ -216,7 +215,7 @@
           <button type="button" id="adic-todo" data-per="todo">Desde 2015</button>
         </div></div>
       <svg id="adicional" viewBox="0 0 1040 244" role="img" aria-label="Adicional tarifário por mês e projeção"></svg>
-      <p class="leg">Valor cobrado na conta em cada bandeira. Na projeção, a linha tracejada é o valor esperado (probabilidade × adicional de cada cor) e a faixa vai do cenário úmido ao seco, com os valores vigentes.</p>
+      <p class="leg">Valor cobrado na conta em cada bandeira. Na projeção, a linha tracejada é o adicional da bandeira esperada (cor do cenário de referência) e a faixa vai do adicional no cenário úmido ao do seco, com os valores vigentes.</p>
     </div>
   </section>
 
@@ -380,7 +379,7 @@
   // ---------- Adicional ----------
   (function () {
     const svg = document.getElementById("adicional"), w = 1040, h = 244, m = { l: 44, r: 12, t: 12, b: 40 };
-    const todo = [...H.map(x => ({ mes: x.mes, v: x.adicional / 10 })), ...fut.map(p => ({ mes: p.alvo, v: p.adicional_esperado / 10, lo: D.adicional_vigente[p.cor_ls] / 10, hi: D.adicional_vigente[p.cor_li] / 10, proj: true }))];
+    const todo = [...H.map(x => ({ mes: x.mes, v: x.adicional / 10 })), ...fut.map(p => ({ mes: p.alvo, v: p.adicional / 10, cor: p.cor_esp, lo: D.adicional_vigente[p.cor_ls] / 10, hi: D.adicional_vigente[p.cor_li] / 10, proj: true }))];
     function desenhar(per) {
       document.querySelectorAll("#abas-adic button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.per === per)));
       document.getElementById("tt-adic").textContent = per === "rec" ? "R$ por 100 kWh, últimos 24 meses e projeção" : "R$ por 100 kWh, 2015 em diante";
@@ -393,7 +392,7 @@
       const marcas = []; for (let v = 0; v <= vmax; v += vmax > 10 ? 5 : 2) marcas.push(v);
       marcas.forEach(t => { S(svg, "line", { x1: m.l, x2: w - m.r, y1: y(t), y2: y(t), stroke: "var(--rule)" }); S(svg, "text", { x: m.l - 6, y: y(t) + 3, "text-anchor": "end" }, "R$ " + n(t)); });
       const i0 = serie.findIndex(s => s.proj), ult = i0 - 1;
-      // faixa úmido–seco em degraus e valor esperado tracejado
+      // faixa úmido–seco em degraus e adicional da cor esperada tracejado
       serie.forEach((s, i) => { if (s.proj) S(svg, "rect", { x: x(i) - hw, y: y(s.hi), width: bw, height: Math.max(1, y(s.lo) - y(s.hi)), fill: "var(--faixa-proj)" }); });
       const reais = serie.slice(0, i0);
       S(svg, "path", { d: reais.map((s, i) => (i ? `V${y(s.v)} H${x(i) + hw}` : `M${x(0) - hw},${y(s.v)} H${x(0) + hw}`)).join(" "), fill: "none", stroke: "var(--ink)", "stroke-width": 1.6 });
@@ -414,7 +413,7 @@
           if (mq === 1) S(svg, "text", { x: x(i) - hw + 3, y: h - 2, class: "forte" }, s.mes.slice(0, 4));
         }
         const alvo = S(svg, "rect", { x: x(i) - hw, y: m.t, width: bw, height: h - m.t - m.b, fill: "transparent" });
-        if (s.proj) dicaEm(alvo, `${rot(s.mes)} · projeção<br>esperado R$ ${n(s.v, 2)} · úmido R$ ${n(s.lo, 2)} · seco R$ ${n(s.hi, 2)} por 100 kWh`);
+        if (s.proj) dicaEm(alvo, `${rot(s.mes)} · projeção<br>bandeira esperada ${s.cor}: R$ ${n(s.v, 3)} · úmido R$ ${n(s.lo, 3)} · seco R$ ${n(s.hi, 3)} por 100 kWh`);
         else dicaEm(alvo, `${rot(s.mes)} · ${real[s.mes]} · R$ ${n(s.v, 2)} por 100 kWh`);
       });
     }
