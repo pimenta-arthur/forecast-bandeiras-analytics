@@ -6,7 +6,7 @@
 <title>Projeção de Bandeiras Tarifárias</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="estilo.css">
 <style>
   /* Layout: painel de produto — cabeçalho com veredito, cartões dos 6 meses, depois blocos visuais em largura total (máx. 1080px) */
@@ -20,9 +20,9 @@
   .meses6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
   .mes { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
   .mes .topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .mes .nome { font-family: var(--f-display); font-stretch: 85%; font-weight: 800; font-size: 1.3rem; }
+  .mes .nome { font-family: var(--f-display); font-weight: 600; font-size: 1.3rem; }
   .mes .h { font-family: var(--f-data); font-size: 0.72rem; color: var(--ink-3); }
-  .chip { border-radius: 6px; padding: 12px 10px; font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 1.05rem; color: var(--on-flag); display: grid; gap: 2px; }
+  .chip { border-radius: 6px; padding: 12px 10px; font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; color: var(--on-flag); display: grid; gap: 2px; }
   .chip small { font-family: var(--f-data); font-weight: 400; font-size: 0.72rem; opacity: 0.92; }
   .chip.Amarela { color: var(--on-am); }
   .probbar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--vazio); gap: 1px; }
@@ -35,7 +35,7 @@
   .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
   .sub { font-size: 0.95rem; color: var(--ink-2); max-width: 72ch; }
-  .ttl { font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 1.02rem; }
+  .ttl { font-family: var(--f-display); font-weight: 600; font-size: 1.02rem; }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
   svg text { font-family: var(--f-data); font-size: 10.5px; fill: var(--ink-3); }
   svg .forte { fill: var(--ink); font-weight: 500; }
@@ -50,7 +50,7 @@
   .abas button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; display: grid; gap: 4px; }
-  .tile .v { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 2.2rem; line-height: 1; }
+  .tile .v { font-family: var(--f-display); font-weight: 600; font-size: 2.2rem; line-height: 1; }
   .tile .d { font-size: 0.88rem; color: var(--ink-2); }
   .tempo { display: grid; gap: 3px; width: max-content; min-width: 100%; }
   .tempo .lin { display: grid; gap: 3px; align-items: center; }
@@ -65,7 +65,7 @@
   .tempo .c.Verde { background: var(--vd); } .tempo .c.Amarela { background: var(--am); } .tempo .c.V1 { background: var(--v1); } .tempo .c.V2 { background: var(--v2); } .tempo .c.Esc { background: var(--esc); }
   .dica { position: fixed; pointer-events: none; z-index: 10; background: var(--ink); color: var(--bg); font-size: 0.82rem; line-height: 1.4; padding: 7px 10px; border-radius: 4px; max-width: 280px; transform: translate(12px, 12px); }
   .aviso { font-size: 0.85rem; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 6px; }
-  .wf-total { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 2rem; }
+  .wf-total { font-family: var(--f-display); font-weight: 600; font-size: 2rem; }
   .duas { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
   @media (max-width: 760px) { .duas { grid-template-columns: 1fr; } }
 </style>
@@ -74,8 +74,9 @@
 <main>
   <nav class="nav" aria-label="Páginas">
     <span class="marca">Previsor de Bandeiras</span>
-    <a href="produto.html" aria-current="page">Projeções</a>
-    <a href="./">Avaliação</a>
+    <a href="./">Projeções</a>
+    <a href="produto.html" aria-current="page">Projeções v1</a>
+    <a href="avaliacao.html">Avaliação</a>
     <a href="metodologia.html">Metodologia</a>
   </nav>
 

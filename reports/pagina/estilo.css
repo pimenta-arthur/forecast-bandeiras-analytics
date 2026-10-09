@@ -11,8 +11,8 @@
   --vd: #2e9e5b; --am: #f2c230; --v1: #e35d4f; --v2: #9e1b1b; --vazio: #eceeef;
   --on-flag: #ffffff; --on-am: #15191d;
   --bar-modelo: #1d5f86; --bar-pers: #b8c0c8; --bar-saz: #8a949e; --bar-oraculo: #15191d;
-  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-display: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
   --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: light;
 }
@@ -35,10 +35,10 @@ body { background: var(--bg); color: var(--ink); font-family: var(--f-body); fon
 main { max-width: 1080px; margin-inline: auto; display: grid; gap: 56px; }
 .texto { max-width: 70ch; }
 section { display: grid; gap: 18px; min-width: 0; }
-h1, h2, h3 { font-family: var(--f-display); font-stretch: 85%; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
-h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.05; }
-h2 { font-size: 1.55rem; font-weight: 700; }
-h3 { font-size: 1.1rem; font-weight: 700; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.005em; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; line-height: 1.05; }
+h2 { font-size: 1.55rem; font-weight: 600; }
+h3 { font-size: 1.1rem; font-weight: 600; }
 p { margin: 0; }
 .rotulo { font-family: var(--f-data); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .lead { font-size: 1.2rem; color: var(--ink-2); max-width: 62ch; }
@@ -49,8 +49,8 @@ strong { font-weight: 600; }
 /* Veredito */
 .veredito { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .cartao { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 22px; display: grid; gap: 10px; align-content: start; min-width: 0; }
-.cartao .cifra { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 2.6rem; line-height: 1; }
-.cartao .cifra small { font-size: 1rem; font-weight: 500; color: var(--ink-3); font-stretch: 100%; }
+.cartao .cifra { font-family: var(--f-display); font-weight: 600; font-size: 2.6rem; line-height: 1; }
+.cartao .cifra small { font-size: 1rem; font-weight: 500; color: var(--ink-3); }
 .selo { justify-self: start; font-family: var(--f-data); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 3px; }
 .selo.usar { background: var(--accent-soft); color: var(--accent); }
 .selo.cenario { background: var(--vazio); color: var(--ink-2); }
@@ -87,7 +87,7 @@ tr.destaque td { font-weight: 600; }
 /* Faixa de bandeiras */
 .faixa { display: grid; gap: 20px; width: max-content; min-width: 100%; }
 .deck { display: grid; gap: 3px; }
-.deck .titulo { grid-column: 1 / -1; font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 0.98rem; padding-bottom: 2px; }
+.deck .titulo { grid-column: 1 / -1; font-family: var(--f-display); font-weight: 600; font-size: 0.98rem; padding-bottom: 2px; }
 .deck .titulo span { position: sticky; left: 0; }
 .deck .lin { font-size: 0.8rem; color: var(--ink-2); align-self: center; }
 .fixo { position: sticky; left: 0; background: var(--bg); z-index: 1; height: 100%; display: flex; align-items: center; }
@@ -121,7 +121,7 @@ footer { color: var(--ink-3); font-size: 0.85rem; border-top: 1px solid var(--ru
 
 /* Navegação entre as páginas */
 .nav { display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: baseline; font-size: 0.95rem; }
-.nav .marca { font-family: var(--f-display); font-stretch: 85%; font-weight: 800; margin-right: auto; }
+.nav .marca { font-family: var(--f-display); font-weight: 600; margin-right: auto; }
 .nav a { color: var(--ink-2); text-decoration: none; padding-block: 2px; border-bottom: 2px solid transparent; }
 .nav a:hover { color: var(--ink); }
 .nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
@@ -133,7 +133,7 @@ footer { color: var(--ink-3); font-size: 0.85rem; border-top: 1px solid var(--ru
 .eq var { font-style: italic; }
 .nota { font-size: 0.92rem; color: var(--ink-2); background: var(--accent-soft); border-radius: 4px; padding: 12px 16px; }
 .passo-det { display: grid; grid-template-columns: 3.2rem 1fr; gap: 6px 16px; padding-block: 18px; border-top: 1px solid var(--rule); }
-.passo-det > .n { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 1.9rem; color: var(--accent); line-height: 1; }
+.passo-det > .n { font-family: var(--f-display); font-weight: 600; font-size: 1.9rem; color: var(--accent); line-height: 1; }
 .passo-det > div { display: grid; gap: 10px; min-width: 0; }
 @media (max-width: 560px) { .passo-det { grid-template-columns: 1fr; } }
 code { font-family: var(--f-data); font-size: 0.88em; background: var(--vazio); padding: 1px 5px; border-radius: 3px; }
