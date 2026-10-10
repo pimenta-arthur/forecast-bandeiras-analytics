@@ -895,3 +895,20 @@ dados, mas a comparação entre os métodos é feita na mesma amostra (dentro da
   são mais estreitas e erram para o lado barato: o real foi melhor que o LS (2º semestre de 2026, ECMWF seco demais).
 - A ENA real cai dentro de P10–P90 dos membros em 83% (M+1–3) e 77% (M+4–6): a faixa da hidrologia está calibrada; o que
   estreita as formas 2 e 3 é a passagem ENA → preço (média de 15 séries por membro amortece os extremos).
+
+### D033 — Rodadas por atualização de insumo, não por mês (2026-10-09)
+
+Implementado no `quant-energia-app`. Uma rodada de projeção é publicada sempre que algum insumo muda
+(deck do NEWAVE novo ou republicado, emissão extra do ECMWF), e pode haver várias no mesmo mês.
+
+- **Insumos de uma rodada:** o mês de deck mais recente com boletim e PMO do mês tratados, na versão
+  ingerida por último, e a emissão mais recente do ECMWF. Para o mês do deck a referência continua sendo
+  a ENA do PMO; de M+1 em diante, a da emissão — inclusive quando a emissão é de um mês posterior ao do deck
+  (ex.: deck de set/26 com o ECMWF de 01/10/26). Isso generaliza a D031 para a operação; o backtest
+  histórico segue com o pareamento mensal da D031.
+- **σ:** mesmo corte validado (erros de meses-alvo encerrados antes do mês do deck).
+- **Registro:** cada rodada guarda id (data e hora), motivo, insumos (mês e versão do deck, emissão do
+  ECMWF) e as projeções; nada é recalculado depois de publicado. A rodada de set/26 (publicada em
+  08/10/2026 neste repositório) foi convertida para esse formato.
+- **Status:** decidido; a combinação "deck de M + ECMWF de M+1" ainda não tem avaliação de desempenho própria
+  (no histórico não há esse caso) e deve ser acompanhada nas rodadas publicadas.
