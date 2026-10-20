@@ -5,6 +5,7 @@ limpeza básica (tipos, datas, valores ausentes) e salvar/ler os dados limpos
 em formato parquet em data/processed/.
 """
 
+import gzip
 import io
 import re
 import unicodedata
@@ -384,11 +385,22 @@ def caminho_relato(ano: int, mes: int) -> Path:
     return caminho_sumario(ano, mes).parent / "relato.rv0"
 
 
-def _linhas_relato(ano: int, mes: int) -> list[str]:
-    return caminho_relato(ano, mes).read_text(encoding="latin-1").splitlines()
+def ler_linhas(caminho: str | Path) -> list[str]:
+    """Linhas de um arquivo texto do DECOMP (relato ou sumário); aceita `.gz`."""
+    caminho = Path(caminho)
+    if caminho.suffix == ".gz" or caminho.read_bytes()[:2] == b"\x1f\x8b":
+        return gzip.decompress(caminho.read_bytes()).decode("latin-1").splitlines()
+    return caminho.read_text(encoding="latin-1").splitlines()
 
 
-def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
+def _linhas_relato(ano: int, mes: int, relato: str | Path | None = None) -> list[str]:
+    """Linhas do relato do PMO do mês ou, se `relato` for dado, de um relato qualquer."""
+    return ler_linhas(relato if relato is not None else caminho_relato(ano, mes))
+
+
+def ler_relato_balanco(
+    ano: int, mes: int, relato: str | Path | None = None
+) -> pd.DataFrame:
     """Lê o RELATORIO DO BALANCO ENERGETICO: uma linha por semana, subsistema e patamar (MWmed).
 
     As colunas são localizadas pelo cabeçalho de cada tabela, porque o layout mudou ao longo
@@ -410,7 +422,7 @@ def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
         "Geol": "geol",
     }
     linhas, semana, sub, colunas = [], None, None, None
-    for ln in _linhas_relato(ano, mes):
+    for ln in _linhas_relato(ano, mes, relato):
         m = re.search(r"SEMANA (\d) - ESTAGIO", ln)
         if m:
             semana = int(m.group(1))
@@ -436,7 +448,9 @@ def ler_relato_balanco(ano: int, mes: int) -> pd.DataFrame:
     return df[df.semana <= n_sem].fillna(0.0).reset_index(drop=True)
 
 
-def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
+def ler_relato_termicas(
+    ano: int, mes: int, relato: str | Path | None = None
+) -> pd.DataFrame:
     """Geração térmica por usina, semana e patamar, com GTmin/GTmax do cadastro (MWmed).
 
     Junta o RELATORIO DA OPERACAO TERMICA E CONTRATOS (geração e flag: I = no mínimo,
@@ -445,7 +459,7 @@ def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
     min(geração, GTmin); somar só as linhas com flag I subestima a inflexibilidade,
     porque usinas acima do mínimo não levam a flag.
     """
-    linhas = _linhas_relato(ano, mes)
+    linhas = _linhas_relato(ano, mes, relato)
 
     inicio = next(
         i
@@ -511,7 +525,9 @@ def ler_relato_termicas(ano: int, mes: int) -> pd.DataFrame:
     return df
 
 
-def ler_relato_pequenas(ano: int, mes: int) -> pd.DataFrame:
+def ler_relato_pequenas(
+    ano: int, mes: int, relato: str | Path | None = None
+) -> pd.DataFrame:
     """Lê o Relatorio dos Dados de Pequenas Usinas: geração por usina, subsistema, semana e patamar (MW).
 
     Colunas: tipo (PCH, PCT, EOL, UFV, PCHgd, PCTgd, EOLgd, UFVgd), subsistema, semana, pat, mw.
@@ -519,7 +535,7 @@ def ler_relato_pequenas(ano: int, mes: int) -> pd.DataFrame:
     do balanço. As linhas `gd` (MMGD) só existem a partir de mai/2023.
     """
     n_sem = horas_por_semana(ano, mes).shape[1]
-    linhas = _linhas_relato(ano, mes)
+    linhas = _linhas_relato(ano, mes, relato)
     inicio = next(
         i
         for i, ln in enumerate(linhas)
@@ -558,10 +574,12 @@ def ler_relato_pequenas(ano: int, mes: int) -> pd.DataFrame:
     return pd.DataFrame(saida)
 
 
-def ler_relato_ande(ano: int, mes: int) -> pd.DataFrame:
+def ler_relato_ande(
+    ano: int, mes: int, relato: str | Path | None = None
+) -> pd.DataFrame:
     """ANDE (Itaipu para o Paraguai + consumo interno) por semana e patamar (MWmed)."""
     n_sem = horas_por_semana(ano, mes).shape[1]
-    linhas = _linhas_relato(ano, mes)
+    linhas = _linhas_relato(ano, mes, relato)
     inicio = next(
         i
         for i, ln in enumerate(linhas)
@@ -577,9 +595,11 @@ def ler_relato_ande(ano: int, mes: int) -> pd.DataFrame:
     return pd.DataFrame(saida)
 
 
-def ler_relato_ear(ano: int, mes: int) -> pd.DataFrame:
+def ler_relato_ear(
+    ano: int, mes: int, relato: str | Path | None = None
+) -> pd.DataFrame:
     """EAR inicial do mês por subsistema (cabeçalho do balanço da semana 1): MWmês e % EARmax."""
-    linhas = _linhas_relato(ano, mes)
+    linhas = _linhas_relato(ano, mes, relato)
     inicio = next(
         i for i, ln in enumerate(linhas) if "RELATORIO  DO  BALANCO  ENERGETICO" in ln
     )

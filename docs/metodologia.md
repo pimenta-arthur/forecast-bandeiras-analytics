@@ -912,3 +912,38 @@ Implementado no `quant-energia-app`. Uma rodada de projeção é publicada sempr
   08/10/2026 neste repositório) foi convertida para esse formato.
 - **Status:** decidido; a combinação "deck de M + ECMWF de M+1" ainda não tem avaliação de desempenho própria
   (no histórico não há esse caso) e deve ser acompanhada nas rodadas publicadas.
+
+### D034 — Cálculo da bandeira a partir de relatos do DECOMP (2026-10-19)
+
+Módulo `src/forecast_bandeiras/calculo_relato.py`: o usuário informa mês e relato(s) e recebe GH_band, GSF, PLD gatilho,
+X, cor e a folga até a cor vizinha, sem passar pelo NEWAVE. Pensado para as execuções do trading, que passam a gerar o
+relato do DECOMP da CCEE (mês seguinte), e para a janela próxima da publicação, em que há também o relato do ONS.
+
+- **Fontes (regra do CLAUDE.md):** GH_band e GSF do **relato do ONS**; PLD gatilho do **relato da CCEE**. O CMO do relato
+  do ONS nunca vira PLD.
+- **Modos de entrada:** (a) só relato da CCEE: PLD gatilho do relato e GH_band do próprio relato da CCEE como
+  **aproximação** (a saída marca a fonte); (b) CCEE + ONS: configuração oficial; (c) só ONS: exige `pld_gatilho_manual`.
+- **PLD gatilho:** custo marginal por semana × patamar × submercado (bloco `CUSTO MARGINAL DE OPERACAO`), limitado ao PLD
+  mín/máx, média do mês pelas horas de cada patamar e ponderação dos 4 submercados pela carga do balanço do relato.
+- **GF_band e PLD mín/máx:** se não informados, os do último boletim publicado até o mês (premissa D013; aviso se o
+  boletim for de outro ano, porque os limites do PLD mudam todo ano).
+- **Várias execuções:** `calcular_execucoes` devolve a tabela por execução e a probabilidade de cada cor (fração das
+  execuções, peso igual).
+- **Leitura:** as funções `load.ler_relato_*` ganharam o parâmetro opcional `relato` (caminho; aceita `.gz`); o
+  comportamento padrão não mudou.
+- **Validação (jan/2023 a out/2026, 45 meses, relato do ONS para o GH e deck da CCEE para o PLD; mesmo conjunto de
+  informação do boletim, sem previsão):** PLD gatilho em centavos nos 45 meses; GSF igual ao do boletim (2 casas) nos 45;
+  cor igual à publicada nos 38 meses com cor registrada. Em set/2024 e mar/2025 o boletim usou a **reedição do deck
+  (`pub=2`)**, não o rv0 original (`pub=1`): com o original o PLD erra em +R$ 40 e −R$ 15; o usuário precisa carregar a
+  publicação certa.
+- **Validação com o `relato.rv0` da CCEE** (`data/raw/ccee_decomp_relato/`, carga lida do próprio relato, sem fallback):
+  PLD gatilho igual ao do boletim em out/2026 (90,19), mai/2026 (237,58), abr/2025 (208,03, **1ª publicação**) e mar/2025
+  (264,69, **2ª publicação**). As publicações erradas divergem (abr/2025 2ª: 215,76; mar/2025 1ª: 249,30), o que confirma
+  que o boletim usa a publicação indicada. Mai/2026 e abr/2025 têm os submercados descolados (SE 271 × NE/N 152; SE 259 ×
+  NE/N 58,6) e a ponderação pela carga reproduz o oficial. GSF e cor iguais aos do boletim nos quatro meses.
+- **GH_band só com o relato da CCEE (aproximação):** difere do GH do ONS em +1,08% (out/2026), −0,31% (mai/2026),
+  +1,00% (abr/2025) e +0,03% (mar/2025), ou seja, até ~0,01 de GSF. Nos quatro meses o GSF arredondado e a cor coincidem,
+  mas perto de um limite de cor 0,01 de GSF pode mudar a bandeira: usar o relato do ONS assim que sair.
+- **Limitações:** não trata GFOM; meses de ano sem arquivo de patamares publicado ainda não têm o fallback da D032 neste
+  módulo; a validação cobre 4 meses com relato completo da CCEE (os 45 meses anteriores usaram o `sumario` da CCEE).
+- **Status:** implementado e validado. A página de uso foi construída no `quant-energia-app` (`web/forecast_bandeiras/relato.html`; cálculo em JS no navegador, `relato_conta.js`, com teste de paridade Python × JS), pensada para o GitHub Pages agora e para o FastAPI depois. Correção posterior: `ler_cmo` passou a parar na 3ª borda da tabela (lia 40 linhas e podia pegar `Med_` de outras tabelas); valores validados inalterados.

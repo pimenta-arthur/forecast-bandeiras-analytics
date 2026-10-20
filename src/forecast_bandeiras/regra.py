@@ -80,20 +80,20 @@ def media_mensal_df(df: pd.DataFrame, coluna: str, horas: pd.DataFrame) -> float
     return media_mensal(tabela.to_numpy(), horas)
 
 
-def calcular_gh_band(ano: int, mes: int) -> dict:
+def calcular_gh_band(ano: int, mes: int, relato=None) -> dict:
     """Calcula o GH_band do mês a partir do relato.rv0 e das horas por patamar.
 
     GH ONS = Σ Ghid + Itaipu 60 Hz (balanço energético); ANDE do eco de Itaipu;
     PCH das pequenas usinas (linhas *_PCH, sem gd). Retorna as parcelas com os
-    mesmos nomes do boletim (MWmed).
+    mesmos nomes do boletim (MWmed). Com `relato`, lê esse arquivo em vez do relato do PMO do mês.
     """
     horas = load.horas_por_semana(ano, mes)
-    bal = load.ler_relato_balanco(ano, mes)
-    peq = load.ler_relato_pequenas(ano, mes)
+    bal = load.ler_relato_balanco(ano, mes, relato)
+    peq = load.ler_relato_pequenas(ano, mes, relato)
     f = fatores_vigentes(ano, mes)
 
     gh_ons = media_mensal_df(bal, "ghid", horas) + media_mensal_df(bal, "it60", horas)
-    ande = media_mensal_df(load.ler_relato_ande(ano, mes), "ande", horas)
+    ande = media_mensal_df(load.ler_relato_ande(ano, mes, relato), "ande", horas)
     pch_linhas = peq[peq.tipo == "PCH"]
     pch = {
         s: media_mensal_df(pch_linhas[pch_linhas.subsistema == s], "mw", horas)
