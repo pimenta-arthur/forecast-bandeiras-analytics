@@ -15,8 +15,9 @@ Preparação / análise exploratória. **Não treinar modelos sem pedido explíc
 
 ## Regras de ambiente
 - Sempre `uv add <pacote>` para instalar (`uv add --dev` para ferramentas de desenvolvimento) e `uv run <comando>` para executar. **Nunca usar pip.**
-- O projeto usa o Python do Homebrew (`/opt/homebrew/opt/python@3.14/bin/python3`, versão em `.python-version`).
-- Se a `.venv` quebrar após uma atualização do Homebrew: apagar a `.venv` e rodar `uv sync`.
+- Python 3.14, fixado em `.python-version`. A origem do Python é configuração da máquina, não do projeto (no Mac do Arthur,
+  `~/.config/uv/uv.toml` com `python-preference = "only-system"` usa o do Homebrew). Sem o 3.14: `uv python install 3.14`.
+- Se a `.venv` quebrar após atualizar o Python: apagar a `.venv` e rodar `uv sync`.
 - Kernel do Jupyter: `Python 3.14 (forecast-bandeiras)`.
 
 ## Estrutura
